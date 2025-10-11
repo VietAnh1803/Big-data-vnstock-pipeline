@@ -272,6 +272,27 @@ services:
     profiles:
       - complete-data  # Only run when explicitly requested
 
+  # Historical Data Fetcher - Fetch data from 2017
+  historical-2017-fetcher:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.historical-2017
+    container_name: historical-2017-fetcher
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-stock_db}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+    networks:
+      - stock-network
+    restart: "no"  # Run once manually
+    profiles:
+      - historical-2017  # Only run when explicitly requested
+
 networks:
   stock-network:
     driver: bridge

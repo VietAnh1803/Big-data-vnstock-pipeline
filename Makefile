@@ -155,6 +155,11 @@ fetch-complete-data: ## Fetch COMPLETE data (profiles, indicators, analytics, in
 	@echo "⚠️  This includes profiles, indicators, analytics, and indices..."
 	docker compose --profile complete-data up --build complete-data-fetcher
 
+fetch-historical-2017: ## Fetch historical data from 2017 to present
+	@echo "🚀 Fetching historical data from 2017..."
+	@echo "⚠️  This will take a very long time (8+ years of data)..."
+	docker compose --profile historical-2017 up --build historical-2017-fetcher
+
 sync-snowflake: ## Sync all tables to Snowflake
 	@echo "🚀 Syncing all tables to Snowflake..."
 	docker run --rm \
