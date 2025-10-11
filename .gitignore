@@ -1,0 +1,75 @@
+# Docker volumes and data
+postgres-data/
+pgadmin-data/
+backups/
+logs/
+
+# Keep data folder for sharing
+!data/
+!data/stock_db_full.sql
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Validation reports
+*validation_report*.json
+dashboard_validation_report*.json
+
+# Historical data (if large)
+historical_data/*.csv
+historical_data/*.json
+
+# Archive files
+archive/*.csv
+archive/*.json
+
+# Node modules (if any)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# pytest cache
+.pytest_cache/
+
+# mypy cache
+.mypy_cache/
+
+# Docker override files
+docker-compose.override.yml
+docker-compose.local.yml

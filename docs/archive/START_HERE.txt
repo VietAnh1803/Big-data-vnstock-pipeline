@@ -1,0 +1,240 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                  🚀 BẮT ĐẦU TỪ ĐÂY - START HERE 🚀                        ║
+║                                                                            ║
+║             Vietnam Stock Market Real-time Pipeline                       ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📂 Thư mục: /u01/Vanh_projects/vietnam-stock-pipeline
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔐 SECURITY FIRST! (ĐỌC TRƯỚC KHI CHẠY!)
+───────────────────────────────────────────────────────────────────────────
+
+⚠️  QUAN TRỌNG: Docker ports giờ chỉ bind localhost (127.0.0.1) để bảo mật!
+
+✅ Truy cập từ server (local):
+   → http://localhost:8501
+
+✅ Truy cập từ máy khác (remote):
+   → Dùng SSH tunnel (an toàn):
+     ssh -L 8501:localhost:8501 oracle@10.0.0.7
+   → Sau đó mở: http://localhost:8501
+
+📚 Chi tiết bảo mật: SECURITY_GUIDE.md
+
+═══════════════════════════════════════════════════════════════════════════
+
+⚠️  BƯỚC 0: CHECK REQUIREMENTS (BẮT BUỘC!)
+───────────────────────────────────────────────────────────────────────────
+
+Trước khi bắt đầu, PHẢI check requirements:
+
+    cd /u01/Vanh_projects/vietnam-stock-pipeline
+    
+    # Check requirements
+    ./scripts/check-requirements.sh
+    
+    # Hoặc dùng Makefile
+    make check-requirements
+
+Script sẽ kiểm tra:
+  ✓ Docker (phiên bản >= 20.10)
+  ✓ Docker Compose (phiên bản >= 2.0)
+  ✓ RAM (>= 8GB)
+  ✓ Disk space (>= 10GB)
+  ✓ Ports availability (8501, 8080, 9092, 5432, etc.)
+  ✓ Project files
+  ✓ .env configuration
+  ✓ Network connectivity
+
+⚠️  NẾU THIẾU DOCKER COMPOSE:
+
+    # CentOS/RHEL/Oracle Linux
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    
+    # Verify
+    docker-compose --version
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ SAU KHI PASS REQUIREMENTS CHECK:
+───────────────────────────────────────────────────────────────────────────
+
+📋 BƯỚC 1: SETUP SNOWFLAKE (5 phút)
+
+1. Mở Snowflake Web UI:
+   🌐 https://BRWNIAD-WC21582.snowflakecomputing.com
+   
+   Login:
+   - Username: vietanh1803
+   - Password: Vanhdzai1803@!
+
+2. Click "Worksheets" → "+ Worksheet"
+
+3. Copy toàn bộ nội dung file:
+   cat config/snowflake-setup-custom.sql
+
+4. Paste vào Worksheet và click "Run All" ▶️
+
+5. Verify:
+   SHOW TABLES;     -- Expected: REALTIME_QUOTES
+   SHOW VIEWS;      -- Expected: 5 views
+
+✅ Chi tiết: docs/SNOWFLAKE_SETUP.md
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚀 BƯỚC 2: KHỞI ĐỘNG PIPELINE (10-15 phút lần đầu)
+
+cd /u01/Vanh_projects/vietnam-stock-pipeline
+
+# Start all services
+docker-compose up -d --build
+
+# Monitor logs
+docker-compose logs -f
+
+# Hoặc dùng Makefile
+make up
+make logs
+
+⏱️  Timeline:
+    0-5 phút:  Download Docker images (~4-5GB)
+    5-8 phút:  Build custom images  
+    8-10 phút: Services starting
+    10-12 phút: Producer fetching data
+    12-15 phút: Data in PostgreSQL & Snowflake
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 BƯỚC 3: TRUY CẬP DASHBOARD
+
+🌐 http://localhost:8501  (Dashboard - đợi 2-3 phút để có data)
+🌐 http://localhost:8080  (Spark Master UI)
+🌐 http://localhost:8081  (Spark Worker UI)
+
+Check health:
+    ./scripts/check-health.sh
+
+═══════════════════════════════════════════════════════════════════════════
+
+🛠️  LỆNH HỮU ÍCH:
+───────────────────────────────────────────────────────────────────────────
+
+# Check requirements trước khi start
+make check-requirements
+
+# Khởi động
+make up
+
+# Xem logs
+make logs
+docker-compose logs -f producer
+docker-compose logs -f spark-processor
+
+# Check status
+make status
+docker-compose ps
+
+# Check health
+./scripts/check-health.sh
+
+# Dừng
+make down
+
+# Check data
+make postgres-count
+docker exec -it postgres psql -U admin -d stock_db \
+  -c "SELECT COUNT(*) FROM realtime_quotes;"
+
+═══════════════════════════════════════════════════════════════════════════
+
+📚 TÀI LIỆU:
+───────────────────────────────────────────────────────────────────────────
+
+📖 INDEX.md                      ← Index tất cả tài liệu
+🚀 QUICKSTART.md                 ← Quick start 5 phút
+📘 README.md                     ← Tài liệu chính đầy đủ
+
+Technical Docs (trong docs/):
+📋 docs/SETUP_CHECKLIST.md       ← Checklist từng bước
+❄️  docs/SNOWFLAKE_SETUP.md      ← Hướng dẫn Snowflake
+🏗️  docs/ARCHITECTURE.md          ← Kiến trúc hệ thống
+🚀 docs/DEPLOYMENT.md            ← Production deployment
+📊 docs/PROJECT_SUMMARY.md       ← Tổng quan dự án
+
+Config:
+⚙️  config/snowflake-setup-custom.sql  ← SQL setup Snowflake
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ CONFIGURATION ĐÃ HOÀN TẤT:
+───────────────────────────────────────────────────────────────────────────
+
+✅ File .env với Snowflake credentials
+✅ PostgreSQL: localhost:5432 (admin/admin123@)
+✅ Snowflake Account: BRWNIAD-WC21582
+✅ Snowflake User: vietanh1803
+✅ Snowflake Database: STOCKS
+✅ Snowflake Warehouse: COMPUTE_WH
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 HỆ THỐNG SẼ THU THẬP:
+───────────────────────────────────────────────────────────────────────────
+
+📈 20 mã cổ phiếu VN: VNM, VIC, VHM, HPG, TCB, VPB, MSN, FPT, 
+                      MWG, BID, CTG, GAS, PLX, SSI, VRE, VCB,
+                      ACB, MBB, HDB, POW
+
+⏱️  Update: 5 giây
+💾 Storage: PostgreSQL (real-time) + Snowflake (warehouse)
+📊 Dashboard refresh: 3 giây
+
+═══════════════════════════════════════════════════════════════════════════
+
+🐛 TROUBLESHOOTING:
+───────────────────────────────────────────────────────────────────────────
+
+Q: Requirements check failed?
+A: Cài đặt Docker Compose (xem hướng dẫn ở trên)
+
+Q: Dashboard không có data?
+A: Đợi 2-3 phút, check logs: docker-compose logs producer
+
+Q: Port conflicts?
+A: Check: netstat -tulpn | grep -E '(8501|8080|9092|5432)'
+
+Q: Out of memory?
+A: Tăng Docker memory limit hoặc giảm số workers
+
+Xem thêm: README.md → Troubleshooting
+
+═══════════════════════════════════════════════════════════════════════════
+
+💡 QUAN TRỌNG:
+───────────────────────────────────────────────────────────────────────────
+
+1. ⚠️  PHẢI chạy check-requirements.sh TRƯỚC
+2. ⚠️  Cài Docker Compose nếu chưa có
+3. ⚠️  Setup Snowflake trước khi start pipeline
+4. ⚠️  Lần đầu mất 10-15 phút để download images
+5. ⚠️  Cần ít nhất 8GB RAM
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎉 READY TO GO!
+
+Bắt đầu với:
+  1. ./scripts/check-requirements.sh
+  2. Setup Snowflake (xem docs/SNOWFLAKE_SETUP.md)
+  3. docker-compose up -d --build
+  4. http://localhost:8501
+
+Happy Data Engineering! 🚀
+
+═══════════════════════════════════════════════════════════════════════════

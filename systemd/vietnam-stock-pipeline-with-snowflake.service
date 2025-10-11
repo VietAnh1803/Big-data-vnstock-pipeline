@@ -1,0 +1,31 @@
+[Unit]
+Description=Vietnam Stock Pipeline with Snowflake Sync - Real-time Data Collection & Sync
+Documentation=https://github.com/your-repo/vietnam-stock-pipeline
+After=docker.service network-online.target
+Requires=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/u01/Vanh_projects/vietnam-stock-pipeline
+ExecStartPre=/usr/local/bin/docker-compose down
+ExecStart=/usr/local/bin/docker-compose --profile snowflake up --remove-orphans
+ExecStop=/usr/local/bin/docker-compose --profile snowflake down
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vietnam-stock-pipeline
+
+# Resource limits
+MemoryLimit=8G
+CPUQuota=400%
+
+# Environment
+Environment="COMPOSE_HTTP_TIMEOUT=200"
+Environment="DOCKER_CLIENT_TIMEOUT=200"
+
+[Install]
+WantedBy=multi-user.target
+
