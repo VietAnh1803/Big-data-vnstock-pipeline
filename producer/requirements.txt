@@ -1,6 +1,10 @@
 kafka-python==2.0.2
-vnstock==3.2.6
-pandas==2.1.4
-numpy==1.26.4
+vnstock==0.2.9.2.3
+pandas==2.0.3
+numpy==1.24.3
 python-dotenv==1.0.0
-
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+packaging==23.2
+ipython==8.17.2

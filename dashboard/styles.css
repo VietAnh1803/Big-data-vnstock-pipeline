@@ -1,0 +1,130 @@
+/* --- GENERAL STYLES --- */
+body {
+    background-color: #0E1117; /* Dark background */
+    color: #FAFAFA; /* Light text */
+}
+h1, h2, h3, h4, h5, h6 {
+    color: #00A9FF; /* Accent color for headers */
+}
+
+/* --- SIDEBAR --- */
+[data-testid="stSidebar"] {
+    background-color: #1A1C24; /* Slightly lighter dark for sidebar */
+}
+
+/* --- METRIC CARDS --- */
+[data-testid="stMetric"] {
+    background-color: #1E1E1E;
+    border: 1px solid #444444;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+[data-testid="stMetric"] .st-emotion-cache-1g8sfyr p { /* Metric label */
+    color: #AAAAAA;
+}
+
+/* --- DATAFRAME TABLES --- */
+.stDataFrame {
+    border: 1px solid #444444;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.stDataFrame thead th {
+    background-color: #262730;
+    color: #00A9FF;
+    font-weight: bold;
+}
+.stDataFrame tbody tr:nth-child(even) {
+    background-color: #1E1E1E; /* Zebra striping */
+}
+.stDataFrame tbody tr:nth-child(odd) {
+    background-color: #262730;
+}
+.stDataFrame tbody tr:hover {
+    background-color: #3C3F41;
+    color: white;
+}
+
+/* --- TABS --- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 24px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    background-color: transparent;
+    border-bottom: 2px solid transparent;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: #1E1E1E;
+}
+.stTabs [aria-selected="true"] {
+    border-bottom: 2px solid #00A9FF;
+    color: #00A9FF;
+}
+
+/* --- BUTTONS & WIDGETS --- */
+.stButton>button {
+    border-radius: 8px;
+    border: 1px solid #00A9FF;
+    background-color: transparent;
+    color: #00A9FF;
+}
+.stButton>button:hover {
+    border-color: #FFFFFF;
+    color: #FFFFFF;
+    background-color: #00A9FF;
+}
+
+/* --- SELECTBOX --- */
+.stSelectbox > div > div {
+    background-color: #1E1E1E;
+    border: 1px solid #444444;
+    border-radius: 8px;
+}
+
+/* --- PLOTLY CHARTS --- */
+.js-plotly-plot {
+    background-color: #0E1117;
+}
+
+/* --- WARNING/INFO BOXES --- */
+.stAlert {
+    background-color: #1E1E1E;
+    border: 1px solid #444444;
+    border-radius: 8px;
+}
+
+/* --- MAIN CONTENT --- */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* --- HEADER STYLING --- */
+.main-header {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #00A9FF;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* --- METRIC CARDS ENHANCED --- */
+.metric-card {
+    background: linear-gradient(135deg, #1E1E1E 0%, #2A2A2A 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    color: white;
+    text-align: center;
+    border: 1px solid #444444;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 169, 255, 0.2);
+}
+
+

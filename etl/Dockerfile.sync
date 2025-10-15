@@ -1,0 +1,31 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# System deps for crypto and compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps (pin compatible Snowflake stack for Py3.10)
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir \
+      pandas \
+      psycopg2-binary \
+      sqlalchemy==1.4.49 \
+      snowflake-sqlalchemy==1.4.3 \
+      snowflake-connector-python==2.9.0 \
+      python-dotenv
+
+# Copy script
+COPY sync_postgres_snowflake.py /app/
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Run the sync script
+CMD ["python", "sync_postgres_snowflake.py"]

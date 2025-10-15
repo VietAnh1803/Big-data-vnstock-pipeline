@@ -16,7 +16,7 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY producer/producer.py .
+COPY etl/kafka_to_postgres.py .
 
-# Run the producer
-CMD ["python", "producer.py"]
+# Run the consumer
+CMD ["python", "kafka_to_postgres.py"]

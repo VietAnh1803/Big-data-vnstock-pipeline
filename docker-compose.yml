@@ -87,6 +87,36 @@ services:
       retries: 5
       start_period: 30s
 
+  # Spark Processor (Structured Streaming)
+  spark-processor:
+    build:
+      context: ./streaming/spark_job
+      dockerfile: Dockerfile
+    container_name: spark-processor
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      spark-master:
+        condition: service_healthy
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      - KAFKA_TOPIC=${KAFKA_TOPIC:-stock-quotes}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-stock_db}
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - CHECKPOINT_QUOTES=/u01/checkpoints/quotes_clean
+      - CHECKPOINT_METRICS=/u01/checkpoints/metrics_minute
+    volumes:
+      - /u01/vsp-spark/checkpoints:/u01/checkpoints
+    networks:
+      - stock-network
+    restart: unless-stopped
+
   # Spark Worker
   spark-worker:
     image: apache/spark:3.5.0
@@ -113,8 +143,8 @@ services:
   # Data Producer - Fetch data from vnstock API
   producer:
     build:
-      context: ./producer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: producer/Dockerfile
     container_name: stock-producer
     depends_on:
       kafka:
@@ -124,15 +154,20 @@ services:
       KAFKA_TOPIC: ${KAFKA_TOPIC:-stock-quotes}
       PRODUCER_INTERVAL: ${PRODUCER_INTERVAL:-300}
       STOCK_SYMBOLS: ${STOCK_SYMBOLS:-}
+      TMPDIR: /u01/tmp
+      PIP_CACHE_DIR: /u01/pip-cache
     networks:
       - stock-network
     restart: unless-stopped
+    volumes:
+      - /u01/vsp-producer/tmp:/u01/tmp
+      - /u01/vsp-producer/pip-cache:/u01/pip-cache
 
   # Kafka to PostgreSQL Consumer (replaces Spark processor due to compatibility issues)
   consumer:
     build:
-      context: ./scripts
-      dockerfile: Dockerfile.consumer
+      context: .
+      dockerfile: etl/Dockerfile.consumer
     container_name: kafka-consumer
     depends_on:
       kafka:
@@ -150,15 +185,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
       BATCH_SIZE: ${BATCH_SIZE:-100}
       BATCH_TIMEOUT: ${BATCH_TIMEOUT:-10}
+      TMPDIR: /u01/tmp
+      PIP_CACHE_DIR: /u01/pip-cache
     networks:
       - stock-network
     restart: unless-stopped
+    volumes:
+      - /u01/vsp-consumer/tmp:/u01/tmp
+      - /u01/vsp-consumer/pip-cache:/u01/pip-cache
 
   # Snowflake Sync (Optional - only runs if Snowflake credentials are provided)
   snowflake-sync:
     build:
-      context: ./scripts
-      dockerfile: Dockerfile.snowflake-sync
+      context: .
+      dockerfile: etl/Dockerfile.sync
     container_name: snowflake-sync
     depends_on:
       postgres:
@@ -186,27 +226,37 @@ services:
   # Streamlit Dashboard
   dashboard:
     build:
-      context: ./dashboard
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: dashboard/Dockerfile
     container_name: stock-dashboard
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       KAFKA_HOST: ${KAFKA_HOST:-kafka}
       KAFKA_PORT: ${KAFKA_PORT:-9092}
       POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-stock_db}
       POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123@}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
       DASHBOARD_REFRESH_INTERVAL: ${DASHBOARD_REFRESH_INTERVAL:-3}
+      TMPDIR: /u01/tmp
+      PIP_CACHE_DIR: /u01/pip-cache
+      STREAMLIT_CACHE_DIR: /u01/streamlit-cache
     ports:
       - "127.0.0.1:8501:8501"  # Dashboard - Localhost only - SECURE (use SSH tunnel or VPN for remote access)
     networks:
       - stock-network
     restart: unless-stopped
     command: streamlit run dashboard_hybrid.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true --server.runOnSave=true --server.fileWatcherType=poll
+    volumes:
+      - /u01/vsp-dashboard/tmp:/u01/tmp
+      - /u01/vsp-dashboard/pip-cache:/u01/pip-cache
+      - /u01/vsp-dashboard/streamlit-cache:/u01/streamlit-cache
 
   # pgAdmin - PostgreSQL Web UI
   pgadmin:
@@ -229,69 +279,6 @@ services:
     networks:
       - stock-network
     restart: unless-stopped
-
-  # Data Fetcher - Fetch ALL data from vnstock (BIG DATA)
-  data-fetcher:
-    build:
-      context: ./scripts
-      dockerfile: Dockerfile.data-fetcher
-    container_name: data-fetcher
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${POSTGRES_DB:-stock_db}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-    networks:
-      - stock-network
-    restart: "no"  # Run once manually
-    profiles:
-      - data-fetch  # Only run when explicitly requested
-
-  # Complete Data Fetcher - Fetch ALL available data types
-  complete-data-fetcher:
-    build:
-      context: ./scripts
-      dockerfile: Dockerfile.complete-fetcher
-    container_name: complete-data-fetcher
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${POSTGRES_DB:-stock_db}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-    networks:
-      - stock-network
-    restart: "no"  # Run once manually
-    profiles:
-      - complete-data  # Only run when explicitly requested
-
-  # Historical Data Fetcher - Fetch data from 2017
-  historical-2017-fetcher:
-    build:
-      context: ./scripts
-      dockerfile: Dockerfile.historical-2017
-    container_name: historical-2017-fetcher
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${POSTGRES_DB:-stock_db}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-    networks:
-      - stock-network
-    restart: "no"  # Run once manually
-    profiles:
-      - historical-2017  # Only run when explicitly requested
 
 networks:
   stock-network:

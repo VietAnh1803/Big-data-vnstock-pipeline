@@ -1,221 +1,198 @@
+#!/usr/bin/env python3
 """
-Producer service for Vietnam Stock Market data.
-Fetches real-time stock quotes using vnstock and publishes to Kafka.
+Simple Kafka Producer for Vietnam Stock Data
 """
 
 import os
-import time
-import json
+import sys
 import logging
+import json
+import time
 from datetime import datetime
 from kafka import KafkaProducer
-from kafka.errors import KafkaError
-from vnstock import Vnstock
+from vnstock import *
+import pandas as pd
+from dotenv import load_dotenv
 
-# Configure logging
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Configuration from environment variables
-KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
-KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'stock-quotes')
-PRODUCER_INTERVAL = int(os.getenv('PRODUCER_INTERVAL', '300'))
-
-# Get list of stocks to track from environment (comma-separated) or use all
-STOCK_FILTER = os.getenv('STOCK_SYMBOLS', '')  # Empty means all stocks
-
-
-def get_all_stock_symbols():
-    """Get all available stock symbols from vnstock."""
-    try:
-        logger.info("Fetching all available stock symbols from vnstock...")
+class SimpleStockProducer:
+    def __init__(self):
+        self.setup_kafka()
+        self.setup_vnstock()
         
-        # Use Vnstock to get listing companies
-        stock = Vnstock().stock(symbol='ACB', source='VCI')
-        
-        # Try to get all listing companies
-        df = stock.listing.all_symbols()
-        
-        if df is not None and not df.empty:
-            # Get ticker column
-            if 'ticker' in df.columns:
-                symbols = df['ticker'].tolist()
-            elif 'symbol' in df.columns:
-                symbols = df['symbol'].tolist()
-            elif 'code' in df.columns:
-                symbols = df['code'].tolist()
-            else:
-                # Fallback to first column if standard column names not found
-                symbols = df.iloc[:, 0].tolist()
-            
-            # Remove any NaN or empty values
-            symbols = [s for s in symbols if s and str(s).strip() and str(s) != 'nan']
-            
-            logger.info(f"Found {len(symbols)} stock symbols from vnstock")
-            return symbols
-        else:
-            logger.warning("No stock symbols found from API, using default list")
-            return get_default_symbols()
-            
-    except Exception as e:
-        logger.error(f"Error fetching stock symbols from vnstock: {e}")
-        logger.info("Falling back to default stock list")
-        return get_default_symbols()
-
-
-def get_default_symbols():
-    """Get default list of top Vietnamese stocks."""
-    return [
-        # Top HOSE stocks
-        'VNM', 'VIC', 'VHM', 'HPG', 'TCB', 'VPB', 'MSN', 'FPT', 
-        'MWG', 'BID', 'CTG', 'GAS', 'PLX', 'SSI', 'VRE', 'VCB',
-        'ACB', 'MBB', 'HDB', 'POW', 'VCI', 'SAB', 'VJC', 'VNM',
-        'NVL', 'PDR', 'VHC', 'DGC', 'DXG', 'KDH', 'VND', 'HCM',
-        # Top HNX stocks
-        'PVS', 'SHS', 'NVB', 'PVX', 'PVC', 'CEO', 'VCS', 'TNG',
-        # Top UPCOM stocks  
-        'VGC', 'MCH', 'ACV', 'VNR', 'BCG'
-    ]
-
-
-# Initialize stock symbols based on configuration
-if STOCK_FILTER:
-    # Use manually specified symbols
-    STOCK_SYMBOLS = [s.strip() for s in STOCK_FILTER.split(',')]
-    logger.info(f"Using {len(STOCK_SYMBOLS)} manually specified symbols")
-else:
-    # Get all available symbols
-    STOCK_SYMBOLS = get_all_stock_symbols()
-
-
-def create_kafka_producer():
-    """Create and return a Kafka producer with retry logic."""
-    max_retries = 10
-    retry_interval = 5
-    
-    for attempt in range(max_retries):
+    def setup_kafka(self):
+        """Setup Kafka producer"""
         try:
-            producer = KafkaProducer(
-                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            load_dotenv()
+            
+            kafka_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092').split(',')
+            
+            self.producer = KafkaProducer(
+                bootstrap_servers=kafka_servers,
+                value_serializer=lambda v: json.dumps(v, default=str).encode('utf-8'),
+                key_serializer=lambda k: k.encode('utf-8') if k else None,
                 acks='all',
                 retries=3,
-                max_in_flight_requests_per_connection=1
+                retry_backoff_ms=1000,
+                request_timeout_ms=30000,
+                max_block_ms=10000
             )
-            logger.info(f"Successfully connected to Kafka at {KAFKA_BOOTSTRAP_SERVERS}")
-            return producer
-        except KafkaError as e:
-            logger.warning(f"Attempt {attempt + 1}/{max_retries}: Failed to connect to Kafka: {e}")
-            if attempt < max_retries - 1:
-                logger.info(f"Retrying in {retry_interval} seconds...")
-                time.sleep(retry_interval)
-            else:
-                logger.error("Max retries reached. Could not connect to Kafka.")
-                raise
-
-
-def fetch_stock_data(stock):
-    """Fetch real-time stock data using vnstock."""
-    try:
-        # Initialize vnstock client
-        stock_client = Vnstock().stock(symbol=stock, source='VCI')
-        
-        # Get real-time quote data
-        quote = stock_client.quote.intraday(symbol=stock, page_size=1)
-        
-        if quote is not None and not quote.empty:
-            latest = quote.iloc[0]
             
-            # Prepare data payload
-            data = {
-                'ticker': stock,
-                'time': datetime.now().isoformat(),
-                'price': float(latest.get('matchPrice', 0)),
-                'volume': int(latest.get('matchVolume', 0)),
-                'total_volume': int(latest.get('accumulatedVol', 0)),
-                'change': float(latest.get('priceChange', 0)),
-                'change_percent': float(latest.get('priceChangePercent', 0)),
-                'ceiling_price': float(latest.get('ceilingPrice', 0)),
-                'floor_price': float(latest.get('floorPrice', 0)),
-                'reference_price': float(latest.get('refPrice', 0)),
-                'highest_price': float(latest.get('highestPrice', 0)),
-                'lowest_price': float(latest.get('lowestPrice', 0)),
-                'bid_price': float(latest.get('bidPrice1', 0)),
-                'ask_price': float(latest.get('askPrice1', 0)),
+            logger.info("✅ Kafka producer initialized")
+            
+        except Exception as e:
+            logger.error(f"❌ Kafka setup failed: {e}")
+            sys.exit(1)
+    
+    def setup_vnstock(self):
+        """Setup vnstock"""
+        try:
+            import vnstock
+            self.vnstock = vnstock
+            logger.info("✅ VNStock initialized")
+        except Exception as e:
+            logger.error(f"❌ VNStock setup failed: {e}")
+            sys.exit(1)
+    
+    def fetch_stock_data(self, ticker):
+        """Fetch intraday/real-time data for a ticker with fallbacks."""
+        def build_payload(now_ts, price, volume, ref, high, low, bid, ask, total_vol=None):
+            return {
+                'ticker': ticker,
+                'time': now_ts,
+                'price': float(price) if price is not None else 0.0,
+                'volume': int(volume) if volume is not None else 0,
+                'total_volume': int(total_vol if total_vol is not None else (volume or 0)),
+                'change': None,  # let consumer compute using reference_price
+                'change_percent': None,  # let consumer compute using reference_price
+                'ceiling_price': None,
+                'floor_price': None,
+                'reference_price': float(ref) if ref is not None else 0.0,
+                'highest_price': float(high) if high is not None else None,
+                'lowest_price': float(low) if low is not None else None,
+                'bid_price': float(bid) if bid is not None else None,
+                'ask_price': float(ask) if ask is not None else None
             }
-            
-            return data
-        else:
-            logger.warning(f"No data returned for {stock}")
-            return None
-            
-    except Exception as e:
-        logger.error(f"Error fetching data for {stock}: {e}")
-        return None
 
+        now_ts = datetime.now().isoformat()
+        try:
+            # 1) Try vnstock realtime quotes API if available
+            try:
+                # Hypothetical realtime endpoint in vnstock (name may differ). Wrap in try.
+                quotes = None
+                if hasattr(self.vnstock, 'realtime_quotes'):
+                    quotes = self.vnstock.realtime_quotes(symbol=ticker)
+                elif hasattr(self.vnstock, 'stock_intraday_data'):
+                    # fallback intraday candles (minute)
+                    quotes = self.vnstock.stock_intraday_data(symbol=ticker, page_size=1)
+                if quotes is not None and not getattr(quotes, 'empty', False):
+                    row = quotes.iloc[-1] if hasattr(quotes, 'iloc') else quotes[-1]
+                    price = row.get('price') or row.get('close')
+                    ref = row.get('reference') or row.get('reference_price')
+                    volume = row.get('volume')
+                    total_vol = row.get('total_volume') or volume
+                    high = row.get('high') or row.get('highest_price')
+                    low = row.get('low') or row.get('lowest_price')
+                    bid = row.get('bid_price') or row.get('bid')
+                    ask = row.get('ask_price') or row.get('ask')
+                    payload = build_payload(now_ts, price, volume, ref, high, low, bid, ask, total_vol)
+                    # Only return if price and ref are present; else fall through
+                    if payload['price'] and payload['reference_price']:
+                        return payload
+            except Exception as e:
+                logger.debug(f"Realtime fetch failed for {ticker}: {e}")
 
-def main():
-    """Main producer loop."""
-    logger.info("Starting Vietnam Stock Market Producer...")
-    logger.info(f"Tracking symbols: {', '.join(STOCK_SYMBOLS)}")
-    logger.info(f"Publishing to topic: {KAFKA_TOPIC}")
-    logger.info(f"Update interval: {PRODUCER_INTERVAL} seconds")
+            # 2) Fallback to daily data: compute reference as previous day's close
+            df = self.vnstock.stock_historical_data(
+                symbol=ticker,
+                start_date=(datetime.now() - pd.Timedelta(days=5)).strftime('%Y-%m-%d'),
+                end_date=datetime.now().strftime('%Y-%m-%d'),
+                resolution='1D'
+            )
+            if df is not None and not df.empty:
+                df = df.sort_values(by=df.columns[0]) if df.shape[1] > 0 else df  # ensure ascending by date col
+                if len(df) >= 2:
+                    latest = df.iloc[-1]
+                    prev = df.iloc[-2]
+                    price = float(latest.get('close', latest.get('Close', 0.0)))
+                    volume = int(latest.get('volume', latest.get('Volume', 0)))
+                    high = float(latest.get('high', latest.get('High', 0.0)))
+                    low = float(latest.get('low', latest.get('Low', 0.0)))
+                    ref = float(prev.get('close', prev.get('Close', price)))
+                    payload = build_payload(now_ts, price, volume, ref, high, low, None, None, volume)
+                    return payload
+                else:
+                    latest = df.iloc[-1]
+                    price = float(latest.get('close', latest.get('Close', 0.0)))
+                    volume = int(latest.get('volume', latest.get('Volume', 0)))
+                    high = float(latest.get('high', latest.get('High', 0.0)))
+                    low = float(latest.get('low', latest.get('Low', 0.0)))
+                    ref = price  # no previous row available
+                    payload = build_payload(now_ts, price, volume, ref, high, low, None, None, volume)
+                    return payload
+
+            # 3) Final fallback – empty payload (will be filtered by consumer)
+            return build_payload(now_ts, 0.0, 0, 0.0, None, None, None, None, 0)
+
+        except Exception as e:
+            logger.warning(f"⚠️ No data returned for {ticker}: {e}")
+            return build_payload(now_ts, 0.0, 0, 0.0, None, None, None, None, 0)
     
-    # Create Kafka producer
-    producer = create_kafka_producer()
+    def publish_message(self, data):
+        """Publish message to Kafka"""
+        try:
+            topic = os.getenv('KAFKA_TOPIC', 'stock-quotes')
+            key = data['ticker']
+            
+            future = self.producer.send(topic, key=key, value=data)
+            record_metadata = future.get(timeout=10)
+            
+            logger.debug(f"Published {data['ticker']} to {topic}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to publish {data['ticker']}: {e}")
+            return False
     
-    message_count = 0
-    
-    try:
+    def run(self):
+        """Main producer loop"""
+        logger.info("🚀 Starting stock data producer...")
+        
+        # Sample tickers
+        tickers = ['VIC', 'VCB', 'VHM', 'HPG', 'MSN', 'VRE', 'CTG', 'BID', 'TCB', 'GAS']
+        
+        message_count = 0
+        
         while True:
-            start_time = time.time()
-            
-            # Fetch and publish data for each stock
-            for symbol in STOCK_SYMBOLS:
-                try:
-                    data = fetch_stock_data(symbol)
-                    
-                    if data:
-                        # Send to Kafka
-                        future = producer.send(KAFKA_TOPIC, value=data)
-                        
-                        # Wait for confirmation
-                        record_metadata = future.get(timeout=10)
-                        
+            try:
+                for ticker in tickers:
+                    data = self.fetch_stock_data(ticker)
+                    if self.publish_message(data):
                         message_count += 1
-                        
-                        if message_count % 20 == 0:
-                            logger.info(f"Published {message_count} messages. Latest: {symbol} @ {data['price']}")
-                        
-                except Exception as e:
-                    logger.error(f"Error processing {symbol}: {e}")
-                    continue
-            
-            # Ensure producer flushes all buffered messages
-            producer.flush()
-            
-            # Calculate sleep time to maintain consistent interval
-            elapsed_time = time.time() - start_time
-            sleep_time = max(0, PRODUCER_INTERVAL - elapsed_time)
-            
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-            else:
-                logger.warning(f"Processing took {elapsed_time:.2f}s, longer than interval {PRODUCER_INTERVAL}s")
+                    
+                    time.sleep(1)  # Be nice to the API
                 
-    except KeyboardInterrupt:
-        logger.info("Received shutdown signal...")
-    except Exception as e:
-        logger.error(f"Unexpected error in main loop: {e}")
-        raise
-    finally:
-        logger.info(f"Shutting down producer. Total messages published: {message_count}")
-        producer.close()
-
+                logger.info(f"Published {len(tickers)} messages. Total: {message_count}")
+                
+                # Wait for next cycle
+                # Default 60s; can set PRODUCER_INTERVAL=120 for 2 phút
+                interval = int(os.getenv('PRODUCER_INTERVAL', '60'))
+                logger.info(f"⏳ Waiting {interval} seconds for next cycle...")
+                time.sleep(interval)
+                
+            except KeyboardInterrupt:
+                logger.info("🛑 Producer stopped by user")
+                break
+            except Exception as e:
+                logger.error(f"❌ Producer error: {e}")
+                time.sleep(10)
 
 if __name__ == "__main__":
-    main()
-
+    producer = SimpleStockProducer()
+    producer.run()
