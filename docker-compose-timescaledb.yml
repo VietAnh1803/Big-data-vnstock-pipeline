@@ -1,0 +1,291 @@
+version: '3.8'
+
+# Vietnam Stock Pipeline - TimescaleDB Migration
+# Senior Data Engineer Level - Optimized for Real-time Stock Data
+
+services:
+  # TimescaleDB - Time-series optimized PostgreSQL
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: vietnam-stock-timescaledb
+    environment:
+      POSTGRES_DB: stock_db
+      POSTGRES_USER: stock_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TIMESCALEDB_TELEMETRY: off
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./scripts/timescaledb_init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock_app -d stock_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: >
+      postgres
+      -c shared_preload_libraries=timescaledb
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+
+  # Zookeeper - Required for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: vietnam-stock-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kafka - Message Streaming Platform
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: vietnam-stock-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Real Data Producer - VNStock API Integration
+  real-data-producer:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.kafka-producer
+    container_name: real-data-producer-vn30
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      COLLECTION_INTERVAL: 10
+      MAX_WORKERS: 24
+      LOG_LEVEL: INFO
+      TICKERS_FILE: /app/data/top200_tickers.txt
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data:ro
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q '[r]eal_data_producer.py'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Spark Structured Streaming Consumer - TimescaleDB Integration
+  spark-consumer:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.spark-consumer
+    container_name: vietnam-stock-spark-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    # Expose Spark UI locally only (for Cursor/SSH port-forward). Also available via proxy at /spark/
+    ports:
+      - "127.0.0.1:4041:4040"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      POSTGRES_URL: jdbc:postgresql://timescaledb:5432/stock_db
+      POSTGRES_USER: stock_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SPARK_MASTER: local[*]
+      SPARK_UI_PORT: 4040
+      # Spark tuning
+      MAX_OFFSETS_PER_TRIGGER: "50000"
+      SPARK_SHUFFLE_PARTITIONS: "200"
+      JDBC_BATCH_SIZE: "10000"
+      JDBC_WRITE_PARTITIONS: "8"
+      STREAM_TRIGGER: "15 seconds"
+    volumes:
+      - spark_checkpoint:/tmp/spark-checkpoint
+      - ./logs:/app/logs
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040/api/v1/applications"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Professional Dashboard - SSI Style
+  dashboard:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.dashboard
+    container_name: vietnam-stock-dashboard
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: stock_db
+      POSTGRES_USER: stock_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      STREAMLIT_SERVER_PORT: 8501
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_HEADLESS: true
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: false
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kafka UI - Web interface for Kafka (topics, partitions, consumer lag)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: vietnam-stock-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      # Basic auth
+      AUTH_TYPE: login
+      SPRING_SECURITY_USER_NAME: admin
+      SPRING_SECURITY_USER_PASSWORD: ${KAFKA_UI_PASSWORD}
+    # Expose Kafka UI locally only (still protected with login). Also via proxy at /kafka/
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q '[j]ava'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # UI Reverse Proxy with Basic Auth for Kafka UI and Spark UI
+  ui-proxy:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.nginx-reverse-proxy
+    container_name: vietnam-stock-ui-proxy
+    depends_on:
+      kafka-ui:
+        condition: service_started
+      spark-consumer:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+
+  # Spark UI Manager - Job and Cluster Management
+  spark-ui-manager:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.spark-ui-manager
+    container_name: vietnam-stock-spark-ui-manager
+    depends_on:
+      kafka:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    ports:
+      - "4040:4040"
+    environment:
+      SPARK_UI_PORT: 4040
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: stock_db
+      POSTGRES_USER: stock_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040/api/v1/applications"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Networks
+networks:
+  vietnam-stock-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volumes
+volumes:
+  timescaledb_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  kafka_data:
+    driver: local
+  spark_checkpoint:
+    driver: local

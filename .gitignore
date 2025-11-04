@@ -1,75 +1,160 @@
-# Docker volumes and data
-postgres-data/
-pgadmin-data/
-backups/
-logs/
+# Python
 
-# Keep data folder for sharing
-!data/
-!data/stock_db_full.sql
-
-# Environment files
-.env
-.env.local
-.env.production
-
-# Python cache
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+*$py.class
 *.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# IDE files
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
-.DS_Store
-Thumbs.db
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Temporary files
-*.tmp
-*.temp
+# Data Files
+data/raw/*.csv
+data/raw/*.json
+data/raw/*.parquet
+data/processed/*.csv
+data/processed/*.json
+data/processed/*.parquet
+data/models/*.pkl
+data/models/*.joblib
+data/backups/*
+data/*.sql
+data/**/*.sql
+
+# Logs
+logs/*.log
+logs/*.txt
 *.log
 
-# Validation reports
-*validation_report*.json
-dashboard_validation_report*.json
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.staging
+.env.*
+config/secrets/*.env
+config/secrets/*.key
+config/secrets/*.pem
 
-# Historical data (if large)
-historical_data/*.csv
-historical_data/*.json
+# Docker
+.dockerignore
 
-# Archive files
-archive/*.csv
-archive/*.json
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
-# Node modules (if any)
-node_modules/
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
 
-# Build artifacts
-dist/
-build/
-*.egg-info/
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Jupyter notebooks checkpoints
-.ipynb_checkpoints/
+# Project Specific
+/u01/vietnam-stock-data-services/
+docker-compose.override.yml
+.docker/
+*.pid
+*.seed
+*.pid.lock
 
-# Coverage reports
-.coverage
+# Test Coverage
 htmlcov/
-
-# pytest cache
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
 .pytest_cache/
 
-# mypy cache
-.mypy_cache/
+# Documentation
+docs/_build/
+docs/build/
 
-# Docker override files
-docker-compose.override.yml
-docker-compose.local.yml
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Cache
+.cache/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Security
+*.pem
+*.key
+*.crt
+*.csr
+secrets/
+credentials/
+
+# Large Files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# IDE Specific
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/shelf
+
+# Local Development
+local/
+dev/
+development/
+
+# Production
+production/
+prod/
+
+# Sensitive Docs (avoid committing secrets)
+ACCOUNTS_PASSWORDS.md
+SECURITY_CONFIGURATION.md

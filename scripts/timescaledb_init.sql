@@ -1,0 +1,1 @@
+-- TimescaleDB Initialization Script

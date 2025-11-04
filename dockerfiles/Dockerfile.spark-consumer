@@ -1,0 +1,29 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies including Java
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    default-jdk \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Java environment
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy Spark consumer application
+COPY consumers/spark_structured_streaming_consumer.py .
+
+# Expose Spark UI port
+EXPOSE 4040
+
+# Command to run the Spark Structured Streaming consumer
+CMD ["python", "spark_structured_streaming_consumer.py"]
