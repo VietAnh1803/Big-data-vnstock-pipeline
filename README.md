@@ -6,6 +6,8 @@ Pipeline chuyên nghiệp để thu thập, xử lý và phân tích dữ liệu
 
 ## 🏗️ Kiến Trúc Hệ Thống
 
+![System Architecture](images/system-architecture.png)
+
 ```
 VNStock API → Kafka Producer → Kafka Topics → Spark Structured Streaming → TimescaleDB → Streamlit Dashboard
      ↓              ↓                ↓                    ↓                    ↓              ↓
@@ -501,10 +503,6 @@ docker system prune -f
 - [ ] Custom indicators
 - [ ] Portfolio management
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -516,5 +514,3 @@ This project is licensed under the MIT License.
 ---
 
 **🚀 Vietnam Stock Big Data Pipeline - Powered by Kafka + Spark + TimescaleDB + Streamlit**
-
-*Senior Data Engineer Level - Professional Real-time Stock Data Processing*
