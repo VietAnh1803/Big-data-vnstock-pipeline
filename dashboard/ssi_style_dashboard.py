@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
-    page_title="Vietnam Stock Market - Professional Dashboard",
+    page_title="Vietnam Stock Market Dashboard",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -116,21 +116,129 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Table Styling */
+    /* Table Styling - Enhanced for visibility */
     .dataframe {
-        background-color: #1e1e1e;
-        color: #ffffff;
+        background-color: #1e1e1e !important;
+        color: #ffffff !important;
     }
     
     .dataframe th {
-        background-color: #2d2d2d;
-        color: #ffffff;
-        font-weight: bold;
+        background-color: #2d2d2d !important;
+        color: #ffffff !important;
+        font-weight: bold !important;
+        border: 1px solid #4a4a4a !important;
     }
     
     .dataframe td {
-        background-color: #1e1e1e;
-        color: #ffffff;
+        background-color: #1e1e1e !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #3a3a3a !important;
+    }
+    
+    /* Streamlit dataframe specific styling */
+    div[data-testid="stDataFrame"] {
+        color: #e0e0e0 !important;
+    }
+    
+    div[data-testid="stDataFrame"] table {
+        color: #e0e0e0 !important;
+        background-color: #1e1e1e !important;
+    }
+    
+    div[data-testid="stDataFrame"] th {
+        color: #ffffff !important;
+        background-color: #2d2d2d !important;
+        font-weight: bold !important;
+    }
+    
+    div[data-testid="stDataFrame"] td {
+        color: #e0e0e0 !important;
+        background-color: #1e1e1e !important;
+    }
+    
+    /* Streamlit table container */
+    .stDataFrame {
+        color: #e0e0e0 !important;
+    }
+    
+    .stDataFrame > div {
+        color: #e0e0e0 !important;
+    }
+    
+    /* Label Styling - Blue Ocean Gradient for better visibility */
+    /* Metric labels - Tổng Cổ Phiếu, Tổng Khối Lượng, Giá Trung Bình, Cập Nhật Cuối */
+    div[data-testid="stMetricLabel"] {
+        background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+    }
+    
+    div[data-testid="stMetricLabel"] p {
+        background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+    }
+    
+    /* Text input labels - Tìm kiếm mã cổ phiếu */
+    label[data-testid="stWidgetLabel"] {
+        background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+    }
+    
+    label[data-testid="stWidgetLabel"] p {
+        background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+    }
+    
+    /* Selectbox labels - Sắp xếp theo, Hiển thị, Chọn Cổ Phiếu */
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="stSelectbox"] label p {
+        background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+    }
+    
+    /* Radio button labels - Khoảng thời gian */
+    div[data-testid="stRadio"] label,
+    div[data-testid="stRadio"] label p {
+        background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+    }
+    
+    /* All labels fallback - ensure all labels are visible */
+    label {
+        color: #42a5f5 !important;
+        font-weight: bold !important;
+    }
+    
+    label p {
+        color: #42a5f5 !important;
+        font-weight: bold !important;
     }
     
     /* Status Indicators */
@@ -327,6 +435,56 @@ class SSIStyleDashboard:
         """
         return self.execute_query(query, (ticker, days))
     
+    def get_recent_records(self, ticker: str, limit: int = 100) -> pd.DataFrame:
+        """Get recent records for a specific stock"""
+        query = """
+            SELECT 
+                ticker,
+                time,
+                price,
+                open_price as open,
+                high,
+                low,
+                close_price as close,
+                volume,
+                change,
+                percent_change
+            FROM realtime_quotes
+            WHERE ticker = %s
+            ORDER BY time DESC
+            LIMIT %s
+        """
+        return self.execute_query(query, (ticker, limit))
+    
+    def get_total_volume_for_range(self, ticker: str, days: int) -> int:
+        """Accurately compute total traded volume for the selected range.
+        - For 1 day: sum for today's VN date (Asia/Ho_Chi_Minh)
+        - For 7/30 days: sum since NOW() - INTERVAL '{days} days'
+        """
+        if days == 1:
+            query = """
+                SELECT COALESCE(SUM(volume), 0) AS total_volume
+                FROM realtime_quotes
+                WHERE ticker = %s
+                  AND (time AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+            """
+            df = self.execute_query(query, (ticker,))
+        else:
+            query = """
+                SELECT COALESCE(SUM(volume), 0) AS total_volume
+                FROM realtime_quotes
+                WHERE ticker = %s
+                  AND time >= NOW() - INTERVAL %s
+            """
+            interval_str = f"{days} days"
+            df = self.execute_query(query, (ticker, interval_str))
+        if not df.empty and 'total_volume' in df.columns:
+            try:
+                return int(pd.to_numeric(df.iloc[0]['total_volume'], errors='coerce').fillna(0))
+            except Exception:
+                return int(float(df.iloc[0]['total_volume'] or 0))
+        return 0
+    
     def create_candlestick_chart(self, df: pd.DataFrame, ticker: str) -> go.Figure:
         """Create professional candlestick chart"""
         if df.empty:
@@ -467,7 +625,7 @@ class SSIStyleDashboard:
     
     def display_header(self):
         """Display SSI-style header"""
-        st.markdown('<h1 class="main-header">📈 Vietnam Stock Market - Professional Dashboard</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-header">📈 Vietnam Stock Market Dashboard</h1>', unsafe_allow_html=True)
         
         # Status bar
         col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
@@ -920,6 +1078,25 @@ class SSIStyleDashboard:
                                 # Hiển thị chart
                                 st.plotly_chart(fig, use_container_width=True)
                                 
+                                # Tổng khối lượng giao dịch theo khoảng thời gian đã chọn
+                                # Original logic: sum on the filtered dataframe (aligned with chart)
+                                vol_series = pd.to_numeric(data['volume'], errors='coerce').fillna(0)
+                                if days == 1:
+                                    # Limit to today's VN date only
+                                    dt_series = pd.to_datetime(data['datetime'], errors='coerce')
+                                    try:
+                                        # If tz-aware, convert to VN
+                                        vn_dates = dt_series.dt.tz_convert('Asia/Ho_Chi_Minh').dt.date
+                                    except Exception:
+                                        # If tz-naive, shift +7h to approximate VN date
+                                        vn_dates = (dt_series + pd.Timedelta(hours=7)).dt.date
+                                    vn_today = (datetime.utcnow() + timedelta(hours=7)).date()
+                                    total_volume = int(vol_series[vn_dates == vn_today].sum())
+                                else:
+                                    total_volume = int(vol_series.sum())
+                                volume_label = f"Tổng Khối Lượng ({time_range})"
+                                st.metric(volume_label, f"{total_volume:,}")
+
                                 # Thông tin gần nhất
                                 latest = data.iloc[-1]
                                 if len(data) > 1:
@@ -952,6 +1129,80 @@ class SSIStyleDashboard:
                     except Exception as e:
                         logger.error(f"Error querying data for {selected_ticker}: {e}", exc_info=True)
                         st.error(f"⚠️ Lỗi khi truy vấn dữ liệu: {e}")
+                else:
+                    st.warning(f"⚠️ Không tìm thấy dữ liệu hiện tại cho {selected_ticker}")
+                
+                # Display recent records table - always show when ticker is selected
+                st.markdown("---")
+                st.markdown('<h3 class="sub-header">📊 Dữ Liệu Chi Tiết (100 Bản Ghi Gần Nhất)</h3>', unsafe_allow_html=True)
+                
+                recent_records = self.get_recent_records(selected_ticker, limit=100)
+                
+                if not recent_records.empty:
+                    # Format the dataframe for display
+                    display_df = recent_records.copy()
+                    
+                    # Sort by time descending (newest first)
+                    display_df = display_df.sort_values('time', ascending=False)
+                    
+                    # Format columns for better readability
+                    display_df['time'] = pd.to_datetime(display_df['time']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                    display_df['price'] = display_df['price'].apply(lambda x: f"{float(x):,.0f}")
+                    display_df['open'] = display_df['open'].apply(lambda x: f"{float(x):,.0f}" if pd.notna(x) else "N/A")
+                    display_df['high'] = display_df['high'].apply(lambda x: f"{float(x):,.0f}" if pd.notna(x) else "N/A")
+                    display_df['low'] = display_df['low'].apply(lambda x: f"{float(x):,.0f}" if pd.notna(x) else "N/A")
+                    display_df['close'] = display_df['close'].apply(lambda x: f"{float(x):,.0f}" if pd.notna(x) else "N/A")
+                    display_df['volume'] = display_df['volume'].apply(lambda x: f"{int(float(x)):,}" if pd.notna(x) else "0")
+                    display_df['change'] = display_df['change'].apply(lambda x: f"{float(x):+,.0f}" if pd.notna(x) else "N/A")
+                    display_df['percent_change'] = display_df['percent_change'].apply(lambda x: f"{float(x):+.2f}%" if pd.notna(x) else "N/A")
+                    
+                    # Rename columns to Vietnamese
+                    display_df.columns = ['Mã', 'Thời Gian', 'Giá', 'Mở', 'Cao', 'Thấp', 'Đóng', 'Khối Lượng', 'Thay Đổi', 'Thay Đổi %']
+                    
+                    # Reorder columns
+                    display_df = display_df[['Mã', 'Thời Gian', 'Giá', 'Mở', 'Cao', 'Thấp', 'Đóng', 'Khối Lượng', 'Thay Đổi', 'Thay Đổi %']]
+                    
+                    # Display table with enhanced styling
+                    st.markdown("""
+                    <style>
+                    div[data-testid="stDataFrame"] {
+                        color: #e0e0e0 !important;
+                    }
+                    div[data-testid="stDataFrame"] table {
+                        color: #e0e0e0 !important;
+                        background-color: #1e1e1e !important;
+                    }
+                    div[data-testid="stDataFrame"] th {
+                        color: #ffffff !important;
+                        background-color: #2d2d2d !important;
+                        font-weight: bold !important;
+                    }
+                    div[data-testid="stDataFrame"] td {
+                        color: #e0e0e0 !important;
+                        background-color: #1e1e1e !important;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    st.dataframe(display_df, use_container_width=True, height=400)
+                    
+                    # Prepare CSV data for download (use original data, not formatted)
+                    csv_df = recent_records.copy()
+                    csv_df = csv_df.sort_values('time', ascending=False)
+                    csv_df['time'] = pd.to_datetime(csv_df['time']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # Convert to CSV
+                    csv_data = csv_df.to_csv(index=False).encode('utf-8-sig')  # utf-8-sig for Excel compatibility
+                    
+                    # Download button
+                    st.download_button(
+                        label="📥 Tải Xuống CSV",
+                        data=csv_data,
+                        file_name=f"{selected_ticker}_recent_records_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        key=f"download_csv_{selected_ticker}"
+                    )
+                else:
+                    st.warning(f"⚠️ Không có dữ liệu chi tiết cho {selected_ticker}")
     
     def run(self):
         """Run the SSI-style dashboard"""
@@ -985,7 +1236,7 @@ class SSIStyleDashboard:
         
         # Footer
         st.markdown("---")
-        st.markdown("### 🚀 Vietnam Stock Market - Professional Dashboard")
+        st.markdown("### 🚀 Vietnam Stock Market Dashboard")
         st.markdown("**Nền Tảng:** Kafka + PostgreSQL + Streamlit | **Nguồn:** VNStock Real-time")
         st.markdown(f"**Cập Nhật:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

@@ -118,7 +118,8 @@ services:
       - vietnam-stock-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep -q '[r]eal_data_producer.py'"]
+      # Alpine base may not include `ps`. Check main process cmdline instead.
+      test: ["CMD-SHELL", "cat /proc/1/cmdline | tr -d '\0' | grep -q real_data_producer.py"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -144,6 +145,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       SPARK_MASTER: local[*]
       SPARK_UI_PORT: 4040
+      SPARK_EVENTLOG_ENABLED: "true"
+      SPARK_EVENTLOG_DIR: /opt/spark/events
       # Spark tuning
       MAX_OFFSETS_PER_TRIGGER: "50000"
       SPARK_SHUFFLE_PARTITIONS: "200"
@@ -152,6 +155,7 @@ services:
       STREAM_TRIGGER: "15 seconds"
     volumes:
       - spark_checkpoint:/tmp/spark-checkpoint
+      - ./logs/spark-events:/opt/spark/events
       - ./logs:/app/logs
     networks:
       - vietnam-stock-network
@@ -234,6 +238,25 @@ services:
         condition: service_started
     ports:
       - "8080:8080"
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+
+  # Spark History Server - view past jobs from event logs
+  spark-history:
+    image: apache/spark:3.4.0
+    container_name: vietnam-stock-spark-history
+    depends_on:
+      spark-consumer:
+        condition: service_started
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+      SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=/opt/spark/events -Dspark.history.retainedApplications=200"
+    command: ["/opt/spark/sbin/start-history-server.sh"]
+    ports:
+      - "127.0.0.1:18080:18080"
+    volumes:
+      - ./logs/spark-events:/opt/spark/events:ro
     networks:
       - vietnam-stock-network
     restart: unless-stopped
