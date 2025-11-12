@@ -15,6 +15,27 @@ Dữ liệu thô → Hàng đợi tin nhắn → Streaming → Xử lý Big Data
                                                               (Quản lý & Monitoring)
 ```
 
+### 📊 Luồng Dữ Liệu (Data Flow)
+
+Hệ thống hoạt động theo kiến trúc pipeline real-time với các giai đoạn xử lý tuần tự:
+
+#### 1. **Thu Thập Dữ Liệu (Data Ingestion)**
+- **VNStock API** → **Kafka Producer**: Producer thu thập dữ liệu thô (raw data) từ VNStock API với tần suất 10 giây/lần cho 200+ mã cổ phiếu
+- **Kafka Producer** → **Kafka Topics**: Producer publish messages vào Kafka topic `realtime_quotes` dưới dạng JSON, tạo hàng đợi tin nhắn (message queue) để xử lý bất đồng bộ
+
+#### 2. **Xử Lý Dữ Liệu (Data Processing)**
+- **Kafka Topics** → **Spark Structured Streaming**: Spark consumer đọc dữ liệu streaming từ Kafka với micro-batching (trigger 15 giây), xử lý và transform dữ liệu
+- **Spark Structured Streaming** → **TimescaleDB**: Spark thực hiện xử lý Big Data (cleaning, validation, aggregation) và lưu trữ vào TimescaleDB dưới dạng time-series data với batch size 10,000 records
+
+#### 3. **Trực Quan Hóa (Visualization)**
+- **TimescaleDB** → **Streamlit Dashboard**: Dashboard truy vấn dữ liệu từ TimescaleDB và hiển thị giao diện phân tích real-time với các biểu đồ candlestick, volume, moving averages
+
+#### 4. **Giám Sát và Quản Lý (Monitoring & Management)**
+- **Kafka UI / Spark UI**: Cung cấp giao diện web để:
+  - **Giám sát Kafka**: Theo dõi topics, partitions, consumer lag, message throughput
+  - **Quản lý & Monitoring Spark**: Monitor Spark jobs, stages, tasks, executor resources, streaming query statistics
+  - Truy cập qua Nginx Reverse Proxy với Basic Authentication
+
 ### 🔧 Các Thành Phần Chính
 
 - **📊 VNStock API**: Thu thập dữ liệu real-time từ thị trường chứng khoán Việt Nam
