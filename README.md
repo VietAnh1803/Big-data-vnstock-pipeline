@@ -74,7 +74,14 @@ cd vietnam-stock-pipeline
 
 ### 3. Cấu Hình
 
-File `ACCOUNTS_PASSWORDS.md` chứa thông tin đăng nhập (không được commit vào git).
+Tạo file `.env` trong thư mục gốc với các biến môi trường cần thiết:
+
+```bash
+POSTGRES_PASSWORD=<your_password>
+KAFKA_UI_PASSWORD=<your_password>
+```
+
+**Lưu ý**: File `.env` đã được thêm vào `.gitignore` và không được commit vào git.
 
 ### 4. Triển Khai Pipeline
 
@@ -318,8 +325,8 @@ vietnam-stock-pipeline/
 ├── logs/                         # Application logs
 ├── docker-compose-timescaledb.yml # Main orchestration file
 ├── requirements.txt              # Python dependencies
-├── README.md                     # This file
-└── ACCOUNTS_PASSWORDS.md         # Credentials (not in git)
+├── .env                          # Environment variables (not in git)
+└── README.md                     # This file
 ```
 
 ### System Design
@@ -418,7 +425,7 @@ docker exec vietnam-stock-timescaledb psql -U stock_app -d stock_db -c "SELECT C
 
 ### Documentation
 - **README.md**: File này
-- **ACCOUNTS_PASSWORDS.md**: Credentials và connection strings
+- **DOCS/SYSTEM_DESIGN.md**: Chi tiết kiến trúc và thiết kế hệ thống
 
 ### Monitoring URLs
 - Dashboard: http://localhost:8501
