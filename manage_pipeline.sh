@@ -47,26 +47,26 @@ check_prerequisites() {
         print_error "Docker is not installed. Please install Docker first."
         exit 1
     fi
-    print_status "✅ Docker is installed"
+    print_status "Docker is installed"
     
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null; then
         print_error "Docker Compose is not installed. Please install Docker Compose first."
         exit 1
     fi
-    print_status "✅ Docker Compose is installed"
+    print_status "Docker Compose is installed"
     
     # Check Python
     if ! command -v python3 &> /dev/null; then
         print_error "Python 3 is not installed. Please install Python 3 first."
         exit 1
     fi
-    print_status "✅ Python 3 is installed"
+    print_status "Python 3 is installed"
     
     # Create necessary directories
     mkdir -p $LOG_DIR
     mkdir -p $CHECKPOINT_DIR
-    print_status "✅ Created necessary directories"
+    print_status "Created necessary directories"
     
     print_status "All prerequisites are satisfied!"
 }
@@ -84,7 +84,7 @@ build_images() {
     print_status "Building Dashboard image..."
     docker-compose -f $COMPOSE_FILE build dashboard
     
-    print_status "✅ All images built successfully!"
+    print_status "All images built successfully!"
 }
 
 # Function to start the pipeline
@@ -106,10 +106,10 @@ start_pipeline() {
     print_status "Starting dashboard..."
     docker-compose -f $COMPOSE_FILE up -d dashboard
     
-    print_status "✅ Pipeline started successfully!"
-    print_status "📊 Dashboard available at: http://localhost:8501"
-    print_status "📈 Kafka available at: localhost:9092"
-    print_status "🗄️ PostgreSQL available at: localhost:5432"
+    print_status "Pipeline started successfully!"
+    print_status "Dashboard available at: http://localhost:8501"
+    print_status "Kafka available at: localhost:9092"
+    print_status "PostgreSQL available at: localhost:5432"
 }
 
 # Function to stop the pipeline
@@ -119,7 +119,7 @@ stop_pipeline() {
     print_status "Stopping all services..."
     docker-compose -f $COMPOSE_FILE down
     
-    print_status "✅ Pipeline stopped successfully!"
+    print_status "Pipeline stopped successfully!"
 }
 
 # Function to restart the pipeline
@@ -158,10 +158,10 @@ show_status() {
     
     echo ""
     echo -e "${BLUE}Service URLs:${NC}"
-    echo -e "   🌐 Spark UI: http://localhost:4040"
-    echo -e "   📊 Dashboard: http://localhost:8501"
-    echo -e "   📋 Kafka Topics: http://localhost:9092"
-    echo -e "   🗄️  PostgreSQL: localhost:5432"
+    echo -e "Spark UI: http://localhost:4040"
+    echo -e "Dashboard: http://localhost:8501"
+    echo -e "Kafka Topics: http://localhost:9092"
+    echo -e "PostgreSQL: localhost:5432"
 }
 
 # Function to show logs
@@ -196,7 +196,7 @@ cleanup() {
         print_status "Cleaning up networks..."
         docker network prune -f
         
-        print_status "✅ Cleanup completed!"
+        print_status "Cleanup completed!"
     else
         print_status "Cleanup cancelled."
     fi
@@ -260,10 +260,10 @@ show_help() {
     echo "  $0 monitor                  # Monitor pipeline in real-time"
     echo ""
     echo "Service URLs:"
-    echo "  🌐 Spark UI: http://localhost:4040"
-    echo "  📊 Dashboard: http://localhost:8501"
-    echo "  📋 Kafka Topics: http://localhost:9092"
-    echo "  🗄️  PostgreSQL: localhost:5432"
+    echo "Spark UI: http://localhost:4040"
+    echo "Dashboard: http://localhost:8501"
+    echo "Kafka Topics: http://localhost:9092"
+    echo "PostgreSQL: localhost:5432"
     echo ""
     echo "Services:"
     echo "  zookeeper         Kafka coordination"
