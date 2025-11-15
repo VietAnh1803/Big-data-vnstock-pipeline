@@ -262,35 +262,36 @@ services:
     restart: unless-stopped
 
   # Spark UI Manager - Job and Cluster Management
-  spark-ui-manager:
-    build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.spark-ui-manager
-    container_name: vietnam-stock-spark-ui-manager
-    depends_on:
-      kafka:
-        condition: service_healthy
-      timescaledb:
-        condition: service_healthy
-    ports:
-      - "4040:4040"
-    environment:
-      SPARK_UI_PORT: 4040
-      POSTGRES_HOST: timescaledb
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: stock_db
-      POSTGRES_USER: stock_app
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - vietnam-stock-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4040/api/v1/applications"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # DISABLED: Service not working properly, using spark-history instead
+  # spark-ui-manager:
+  #   build:
+  #     context: .
+  #     dockerfile: dockerfiles/Dockerfile.spark-ui-manager
+  #   container_name: vietnam-stock-spark-ui-manager
+  #   depends_on:
+  #     kafka:
+  #       condition: service_healthy
+  #     timescaledb:
+  #       condition: service_healthy
+  #   ports:
+  #     - "4040:4040"
+  #   environment:
+  #     SPARK_UI_PORT: 4040
+  #     POSTGRES_HOST: timescaledb
+  #     POSTGRES_PORT: 5432
+  #     POSTGRES_DB: stock_db
+  #     POSTGRES_USER: stock_app
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - ./logs:/app/logs
+  #   networks:
+  #     - vietnam-stock-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:4040/api/v1/applications"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
 # Networks
 networks:
