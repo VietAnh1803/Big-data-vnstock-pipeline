@@ -1,15 +1,15 @@
-# 🚀 Quick Start Guide
+#Quick Start Guide
 
 Hướng dẫn nhanh để khởi động Vietnam Stock Big Data Pipeline.
 
-## 📋 Prerequisites
+##Prerequisites
 
 - Docker & Docker Compose đã cài đặt
 - RAM: Tối thiểu 8GB
 - Disk: 50GB+ free space
 - Internet connection
 
-## ⚡ 3 Bước Khởi Động
+## 3 Bước Khởi Động
 
 ### Bước 1: Clone và Di Chuyển
 
@@ -31,7 +31,7 @@ docker-compose -f docker-compose-timescaledb.yml ps
 
 Đợi tất cả services chuyển sang trạng thái `healthy` (khoảng 1-2 phút).
 
-## 🌐 Truy Cập Dashboard
+## Truy Cập Dashboard
 
 Mở browser và truy cập:
 
@@ -40,7 +40,7 @@ Mở browser và truy cập:
   - Username: `admin`
   - Password: `<password>`
 
-## 📊 Kiểm Tra Dữ Liệu
+## Kiểm Tra Dữ Liệu
 
 ### Xem Logs Producer
 
@@ -50,8 +50,8 @@ docker logs real-data-producer-vn30 --tail 50
 
 Bạn sẽ thấy:
 ```
-📊 Collecting REAL-TIME quotes for 200 stocks...
-✅ Cycle completed: 125 success, 5 no_data, 0 errors
+Collecting REAL-TIME quotes for 200 stocks...
+Cycle completed: 125 success, 5 no_data, 0 errors
 ```
 
 ### Kiểm Tra Database
@@ -64,7 +64,7 @@ docker exec vietnam-stock-timescaledb psql -U stock_app -d stock_db -c "SELECT C
 
 Qua Kafka UI: http://localhost:8080/kafka/ (login: admin / <password>)
 
-## 🛠️ Quản Lý Services
+## Quản Lý Services
 
 ### Xem Logs
 
@@ -96,7 +96,7 @@ docker-compose -f docker-compose-timescaledb.yml stop
 docker-compose -f docker-compose-timescaledb.yml start
 ```
 
-## 🔍 Monitoring
+## Monitoring
 
 ### Resource Usage
 
@@ -128,7 +128,7 @@ SELECT DISTINCT ticker FROM realtime_quotes ORDER BY ticker;
 SELECT ticker, MAX(time) FROM realtime_quotes GROUP BY ticker;
 ```
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Service không start
 
@@ -153,12 +153,12 @@ docker stats
 2. Xem logs: `docker logs vietnam-stock-dashboard`
 3. Restart: `docker-compose -f docker-compose-timescaledb.yml restart dashboard`
 
-## 📚 Tài Liệu Thêm
+## Tài Liệu Thêm
 
 - **README.md**: Tài liệu đầy đủ
-- **ACCOUNTS_PASSWORDS.md**: Credentials và connection strings
+- **.env**: Credentials và connection strings (tạo file .env từ .env.example)
 
-## 💡 Tips
+## Tips
 
 - **Đợi 1-2 phút** sau khi start để tất cả services ready
 - **Kiểm tra logs** nếu có vấn đề
@@ -167,5 +167,5 @@ docker stats
 
 ---
 
-**🎉 Chúc bạn sử dụng thành công!**
+**Chúc bạn sử dụng thành công!**
 

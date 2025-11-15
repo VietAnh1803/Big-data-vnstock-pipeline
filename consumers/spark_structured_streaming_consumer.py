@@ -64,11 +64,11 @@ class VietnamStockSparkConsumer:
             # Set log level
             self.spark.sparkContext.setLogLevel("WARN")
             
-            logger.info("✅ Spark session initialized successfully")
-            logger.info(f"📊 Spark UI: http://localhost:4040")
+            logger.info("Spark session initialized successfully")
+            logger.info(f"Spark UI: http://localhost:4040")
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Spark session: {e}")
+            logger.error(f"Failed to initialize Spark session: {e}")
             raise
     
     def get_schema(self) -> StructType:
@@ -106,11 +106,11 @@ class VietnamStockSparkConsumer:
             # Data cleaning and validation
             cleaned_df = self._clean_and_validate_data(parsed_df)
             
-            logger.info("✅ Kafka stream reading configured with data cleaning")
+            logger.info("Kafka stream reading configured with data cleaning")
             return cleaned_df
             
         except Exception as e:
-            logger.error(f"❌ Failed to read Kafka stream: {e}")
+            logger.error(f"Failed to read Kafka stream: {e}")
             raise
     
     def _clean_and_validate_data(self, df):
@@ -157,11 +157,11 @@ class VietnamStockSparkConsumer:
                 (col("volume") >= 0)
             )
             
-            logger.info("✅ Data cleaning and validation completed")
+            logger.info("Data cleaning and validation completed")
             return cleaned_df
             
         except Exception as e:
-            logger.error(f"❌ Failed to clean and validate data: {e}")
+            logger.error(f"Failed to clean and validate data: {e}")
             # Return original dataframe if cleaning fails
             return df
     
@@ -169,7 +169,7 @@ class VietnamStockSparkConsumer:
         """Write batch data to PostgreSQL with proper data type handling"""
         try:
             # Debug: Print DataFrame schema
-            logger.info(f"🔍 DataFrame schema for batch {epoch_id}: {df.schema}")
+            logger.info(f"DataFrame schema for batch {epoch_id}: {df.schema}")
             
             # Prepare data for PostgreSQL with correct types and column mapping
             # Map ingest_time to 'time' column (primary timestamp in DB)
@@ -205,15 +205,15 @@ class VietnamStockSparkConsumer:
                 .save()
             
             count = prepared_df.count()
-            logger.info(f"✅ Batch {epoch_id}: Inserted {count} cleaned records to PostgreSQL")
+            logger.info(f"Batch {epoch_id}: Inserted {count} cleaned records to PostgreSQL")
             
         except Exception as e:
-            logger.error(f"❌ Failed to write batch {epoch_id} to PostgreSQL: {e}")
+            logger.error(f"Failed to write batch {epoch_id} to PostgreSQL: {e}")
     
     def start_streaming(self):
         """Start Spark Structured Streaming"""
         try:
-            logger.info("🚀 Starting Spark Structured Streaming...")
+            logger.info("Starting Spark Structured Streaming...")
             
             # Read Kafka stream
             stream_df = self.read_kafka_stream()
@@ -226,20 +226,20 @@ class VietnamStockSparkConsumer:
                 .option("checkpointLocation", "/tmp/spark-checkpoint") \
                 .start()
             
-            logger.info("✅ Spark Structured Streaming started")
-            logger.info(f"📊 Query ID: {query.id}")
-            logger.info(f"📊 Query Name: {query.name}")
+            logger.info("Spark Structured Streaming started")
+            logger.info(f"Query ID: {query.id}")
+            logger.info(f"Query Name: {query.name}")
             
             return query
             
         except Exception as e:
-            logger.error(f"❌ Failed to start streaming: {e}")
+            logger.error(f"Failed to start streaming: {e}")
             raise
     
     def run(self):
         """Main execution method"""
         try:
-            logger.info("🎯 Starting Vietnam Stock Spark Consumer...")
+            logger.info("Starting Vietnam Stock Spark Consumer...")
             
             # Start streaming
             query = self.start_streaming()
@@ -248,16 +248,16 @@ class VietnamStockSparkConsumer:
             query.awaitTermination()
             
         except KeyboardInterrupt:
-            logger.info("🛑 Received interrupt signal, shutting down...")
+            logger.info("Received interrupt signal, shutting down...")
             if 'query' in locals():
                 query.stop()
         except Exception as e:
-            logger.error(f"❌ Error in main execution: {e}")
+            logger.error(f"Error in main execution: {e}")
             raise
         finally:
             if self.spark:
                 self.spark.stop()
-                logger.info("🔚 Spark session stopped")
+                logger.info("Spark session stopped")
 
 def main():
     """Main entry point"""

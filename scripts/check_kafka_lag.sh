@@ -5,14 +5,14 @@ echo "=== Kafka Topic: realtime_quotes ==="
 echo ""
 
 # Get latest offsets for all partitions
-echo "📊 Latest Offsets (end of log):"
+echo "Latest Offsets (end of log):"
 docker exec vietnam-stock-kafka kafka-run-class kafka.tools.GetOffsetShell \
     --broker-list localhost:29092 \
     --topic realtime_quotes \
     --time -1 | sort -t: -k2 -n
 
 echo ""
-echo "📈 Earliest Offsets (start of log):"
+echo "Earliest Offsets (start of log):"
 docker exec vietnam-stock-kafka kafka-run-class kafka.tools.GetOffsetShell \
     --broker-list localhost:29092 \
     --topic realtime_quotes \
@@ -24,12 +24,12 @@ echo "Checking checkpoint location: /tmp/spark-checkpoint"
 
 # Check if checkpoint exists
 if docker exec vietnam-stock-spark-consumer test -d /tmp/spark-checkpoint/sources/0; then
-    echo "✅ Checkpoint found"
+    echo "Checkpoint found"
     echo ""
     echo "Checkpoint offsets:"
-    docker exec vietnam-stock-spark-consumer cat /tmp/spark-checkpoint/sources/0/*/metadata 2>/dev/null | grep -o '"latestOffset"[^}]*}' | head -5 || echo "⚠️  Could not read checkpoint offsets"
+    docker exec vietnam-stock-spark-consumer cat /tmp/spark-checkpoint/sources/0/*/metadata 2>/dev/null | grep -o '"latestOffset"[^}]*}' | head -5 || echo "WARNING: Could not read checkpoint offsets"
 else
-    echo "⚠️  Checkpoint directory not found"
+    echo "WARNING: Checkpoint directory not found"
 fi
 
 echo ""

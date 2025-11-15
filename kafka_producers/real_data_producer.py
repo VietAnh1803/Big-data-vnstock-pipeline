@@ -41,7 +41,7 @@ class VietnamStockRealDataProducer:
         self.popular_stocks = self._load_tickers()
         self.market_indices = ['VNINDEX', 'HNXINDEX', 'UPCOMINDEX', 'VN30']
 
-        logger.info(f"📊 Loaded {len(self.popular_stocks)} Vietnam stocks for real data collection")
+        logger.info(f"Loaded {len(self.popular_stocks)} Vietnam stocks for real data collection")
 
     def _init_kafka_producer(self):
         """Initialize Kafka Producer"""
@@ -57,10 +57,10 @@ class VietnamStockRealDataProducer:
                 max_block_ms=60000,
                 request_timeout_ms=30000
             )
-            logger.info("✅ Kafka Producer initialized successfully")
+            logger.info("Kafka Producer initialized successfully")
             return producer
         except KafkaError as e:
-            logger.error(f"❌ Kafka Producer initialization failed: {e}")
+            logger.error(f"Kafka Producer initialization failed: {e}")
             exit(1)
 
     def _load_tickers(self) -> List[str]:
@@ -72,7 +72,7 @@ class VietnamStockRealDataProducer:
         if tickers_env:
             items = [t.strip().upper() for t in tickers_env.split(',') if t.strip()]
             if items:
-                logger.info(f"📋 Loaded {len(items)} tickers from TICKERS env variable")
+                logger.info(f"Loaded {len(items)} tickers from TICKERS env variable")
                 return items
         
         # Priority 2: TICKERS_FILE environment variable
@@ -81,10 +81,10 @@ class VietnamStockRealDataProducer:
                 with open(tickers_file, 'r') as f:
                     items = [line.strip().upper() for line in f if line.strip() and not line.startswith('#')]
                 if items:
-                    logger.info(f"📋 Loaded {len(items)} tickers from TICKERS_FILE: {tickers_file}")
+                    logger.info(f"Loaded {len(items)} tickers from TICKERS_FILE: {tickers_file}")
                     return items
             except Exception as e:
-                logger.warning(f"⚠️ Failed to read TICKERS_FILE '{tickers_file}': {e}")
+                logger.warning(f"Failed to read TICKERS_FILE '{tickers_file}': {e}")
         
         # Priority 3: Try default top200_tickers.txt file
         default_file = '/app/data/top200_tickers.txt'
@@ -92,13 +92,13 @@ class VietnamStockRealDataProducer:
             with open(default_file, 'r') as f:
                 items = [line.strip().upper() for line in f if line.strip() and not line.startswith('#')]
                 if items:
-                    logger.info(f"📋 Loaded {len(items)} tickers from default file: {default_file}")
+                    logger.info(f"Loaded {len(items)} tickers from default file: {default_file}")
                     return items
         except Exception as e:
-            logger.warning(f"⚠️ Failed to read default tickers file '{default_file}': {e}")
+            logger.warning(f"Failed to read default tickers file '{default_file}': {e}")
         
         # Fallback: curated list (~60)
-        logger.warning("⚠️ Using fallback curated list (~60 tickers). Consider providing TICKERS_FILE for more tickers.")
+        logger.warning("Using fallback curated list (~60 tickers). Consider providing TICKERS_FILE for more tickers.")
         return [
             # VN30 core
             'VCB', 'VIC', 'VHM', 'HPG', 'FPT', 'MWG', 'PNJ', 'VNM', 'GAS', 'PLX',
@@ -176,14 +176,14 @@ class VietnamStockRealDataProducer:
                         'data_source': 'VNStock Real Data'
                     }
                 except (KeyError, ValueError) as e:
-                    logger.warning(f"⚠️ Data format issue for {ticker}: {str(e)}")
+                    logger.warning(f"Data format issue for {ticker}: {str(e)}")
                     return None
             else:
-                logger.warning(f"⚠️ No data returned for {ticker}")
+                logger.warning(f"No data returned for {ticker}")
                 return None
                 
         except Exception as e:
-            logger.error(f"❌ Error fetching real data for {ticker}: {str(e)}")
+            logger.error(f"Error fetching real data for {ticker}: {str(e)}")
             return None
 
     def _publish_to_kafka(self, topic: str, data: Dict[str, Any]):
@@ -192,9 +192,9 @@ class VietnamStockRealDataProducer:
             key_bytes = (data.get('ticker') or 'NA').encode('utf-8')
             self.producer.send(topic, key=key_bytes, value=data)
             self.producer.flush()  # Ensure message is sent immediately
-            logger.info(f"✅ Published to topic '{topic}': {data.get('ticker', 'N/A')}")
+            logger.info(f"Published to topic '{topic}': {data.get('ticker', 'N/A')}")
         except KafkaError as e:
-            logger.error(f"❌ Failed to publish to topic '{topic}': {e}")
+            logger.error(f"Failed to publish to topic '{topic}': {e}")
 
     def collect_real_realtime_quotes(self):
         """Collect real-time quotes using VNStock API"""
@@ -202,18 +202,18 @@ class VietnamStockRealDataProducer:
             logger.info("Market is closed. Skipping real-time quote collection.")
             return
 
-        logger.info(f"📈 Collecting REAL-TIME quotes for {len(self.popular_stocks)} stocks...")
+        logger.info(f"Collecting REAL-TIME quotes for {len(self.popular_stocks)} stocks...")
 
         success_count = 0
         error_count = 0
         no_data_count = 0
 
         def worker(ticker: str) -> Optional[Dict[str, Any]]:
-            try:
-                return self._fetch_real_stock_data(ticker)
-            except Exception as e:
-                logger.error(f"❌ Error fetching {ticker}: {e}")
-                return None
+                try:
+                    return self._fetch_real_stock_data(ticker)
+                except Exception as e:
+                    logger.error(f"Error fetching {ticker}: {e}")
+                    return None
 
         # Parallel fetch to increase throughput; control workers via MAX_WORKERS
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -228,33 +228,33 @@ class VietnamStockRealDataProducer:
                     else:
                         no_data_count += 1
                 except Exception as e:
-                    logger.error(f"❌ Error in future for {ticker}: {e}")
+                    logger.error(f"Error in future for {ticker}: {e}")
                     error_count += 1
 
         logger.info(
-            f"✅ Cycle stats: published={success_count}, no_data={no_data_count}, errors={error_count}, tickers={len(self.popular_stocks)}"
+            f"Cycle stats: published={success_count}, no_data={no_data_count}, errors={error_count}, tickers={len(self.popular_stocks)}"
         )
 
     def run_schedule(self):
         """Schedule real data collection"""
-        logger.info("🚀 Starting Vietnam Stock REAL DATA Producer...")
-        logger.info("📊 Using VNStock API for authentic market data")
+        logger.info("Starting Vietnam Stock REAL DATA Producer...")
+        logger.info("Using VNStock API for authentic market data")
         
         cycle_count = 0
         while True:
             cycle_count += 1
-            logger.info(f"🔄 Real Data Collection Cycle #{cycle_count}")
+            logger.info(f"Real Data Collection Cycle #{cycle_count}")
             
             vietnam_time = datetime.now(self.timezone)
-            logger.info(f"🇻🇳 Vietnam Time (GMT+7): {vietnam_time.strftime('%Y-%m-%d %H:%M:%S %z')}")
+            logger.info(f"Vietnam Time (GMT+7): {vietnam_time.strftime('%Y-%m-%d %H:%M:%S %z')}")
             
             if self._is_market_open():
-                logger.info("📊 Market Status: OPEN - Collecting REAL data")
+                logger.info("Market Status: OPEN - Collecting REAL data")
                 self.collect_real_realtime_quotes()
             else:
-                logger.info("📊 Market Status: CLOSED")
+                logger.info("Market Status: CLOSED")
             
-            logger.info(f"✅ Real data collection cycle #{cycle_count} completed")
+            logger.info(f"Real data collection cycle #{cycle_count} completed")
             time.sleep(self.collection_interval)
 
     def stop(self):
@@ -262,13 +262,13 @@ class VietnamStockRealDataProducer:
         if self.producer:
             self.producer.flush()
             self.producer.close()
-            logger.info("✅ Real data producer stopped successfully")
+            logger.info("Real data producer stopped successfully")
 
 if __name__ == "__main__":
     producer = VietnamStockRealDataProducer()
     try:
         producer.run_schedule()
     except KeyboardInterrupt:
-        logger.info("🛑 Stopping Vietnam Stock Real Data Producer...")
+        logger.info("Stopping Vietnam Stock Real Data Producer...")
     finally:
         producer.stop()
