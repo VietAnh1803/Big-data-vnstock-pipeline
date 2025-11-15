@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 # Page configuration
 st.set_page_config(
     page_title="Vietnam Stock Market Dashboard",
-    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -291,7 +290,7 @@ class SSIStyleDashboard:
         try:
             return psycopg2.connect(**self.db_config)
         except Exception as e:
-            st.error(f"❌ Database connection failed: {e}")
+            st.error(f"Database connection failed: {e}")
             return None
             
     def execute_query(self, query: str, params: tuple = None) -> pd.DataFrame:
@@ -306,7 +305,7 @@ class SSIStyleDashboard:
                 results = cursor.fetchall()
                 return pd.DataFrame(results)
         except Exception as e:
-            st.error(f"❌ Query execution failed: {e}")
+            st.error(f"Query execution failed: {e}")
             return pd.DataFrame()
         finally:
             conn.close()
@@ -625,14 +624,14 @@ class SSIStyleDashboard:
     
     def display_header(self):
         """Display SSI-style header"""
-        st.markdown('<h1 class="main-header">📈 Vietnam Stock Market Dashboard</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="main-header">Vietnam Stock Market Dashboard</h1>', unsafe_allow_html=True)
         
         # Status bar
         col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
         
         with col1:
             current_time = datetime.now().strftime('%H:%M:%S')
-            st.markdown(f'<div class="refresh-indicator">🔄 Real-time | Cập nhật: {current_time}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="refresh-indicator">Real-time | Cập nhật: {current_time}</div>', unsafe_allow_html=True)
         
         with col2:
             st.markdown('<div class="status-online">● Online</div>', unsafe_allow_html=True)
@@ -641,7 +640,7 @@ class SSIStyleDashboard:
             st.markdown('<div class="status-online">● Kafka Active</div>', unsafe_allow_html=True)
         
         with col4:
-            if st.button("🔄 Refresh", key="main_refresh"):
+            if st.button("Refresh", key="main_refresh"):
                 # Preserve current page before rerun
                 if 'current_page' in st.session_state:
                     st.session_state.preserved_page = st.session_state['current_page']
@@ -655,7 +654,7 @@ class SSIStyleDashboard:
     
     def display_market_overview(self):
         """Display market overview with SSI-style metrics"""
-        st.markdown('<h2 class="sub-header">📊 Tổng Quan Thị Trường</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="sub-header">Tổng Quan Thị Trường</h2>', unsafe_allow_html=True)
         
         market_summary = self.get_market_summary()
         
@@ -707,7 +706,7 @@ class SSIStyleDashboard:
                 )
             
             # Market performance chart
-            st.markdown('<h3 class="sub-header">📈 Phân Bố Hiệu Suất</h3>', unsafe_allow_html=True)
+            st.markdown('<h3 class="sub-header">Phân Bố Hiệu Suất</h3>', unsafe_allow_html=True)
             
             performance_data = {
                 'Loại': ['Tăng Giá', 'Giảm Giá', 'Không Đổi'],
@@ -737,13 +736,13 @@ class SSIStyleDashboard:
     
     def display_price_board(self):
         """Display SSI-style price board"""
-        st.markdown('<h2 class="sub-header">📋 Bảng Giá Real-time</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="sub-header">Bảng Giá Real-time</h2>', unsafe_allow_html=True)
         
         # Search and filter
         col1, col2, col3 = st.columns([2, 1, 1])
         
         with col1:
-            search_ticker = st.text_input("🔍 Tìm kiếm mã cổ phiếu:", placeholder="VD: VCB, VIC, HPG...")
+            search_ticker = st.text_input("Tìm kiếm mã cổ phiếu:", placeholder="VD: VCB, VIC, HPG...")
         
         with col2:
             sort_by = st.selectbox("Sắp xếp theo:", ["Khối lượng", "Thay đổi %", "Giá"])
@@ -787,11 +786,11 @@ class SSIStyleDashboard:
                 height=400
             )
         else:
-            st.warning("⚠️ Không có dữ liệu real-time")
+            st.warning("Không có dữ liệu real-time")
     
     def display_top_performers(self):
         """Display top performers"""
-        st.markdown('<h2 class="sub-header">🚀 Top Cổ Phiếu Tăng Giá</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="sub-header">Top Cổ Phiếu Tăng Giá</h2>', unsafe_allow_html=True)
         
         top_performers = self.get_top_performers(20)
         
@@ -821,7 +820,7 @@ class SSIStyleDashboard:
             st.plotly_chart(fig, use_container_width=True)
             
             # Display table
-            st.markdown('<h3 class="sub-header">📊 Chi Tiết Top Performers</h3>', unsafe_allow_html=True)
+            st.markdown('<h3 class="sub-header">Chi Tiết Top Performers</h3>', unsafe_allow_html=True)
             
             display_df = top_performers[['ticker', 'price', 'percent_change', 'volume', 'change']].copy()
             display_df['price'] = display_df['price'].apply(lambda x: f"{x:,.0f}")
@@ -835,7 +834,7 @@ class SSIStyleDashboard:
     
     def display_stock_analysis(self):
         """Display individual stock analysis"""
-        st.markdown('<h2 class="sub-header">🔍 Phân Tích Cổ Phiếu</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="sub-header">Phân Tích Cổ Phiếu</h2>', unsafe_allow_html=True)
         
         # Get available tickers (only active ones with recent data)
         tickers_query = """
@@ -902,7 +901,7 @@ class SSIStyleDashboard:
                         st.metric("Cao/Thấp", f"{quote['high']:,.0f} / {quote['low']:,.0f}")
                     
                     # Historical chart
-                    st.markdown('<h3 class="sub-header">📈 Biểu Đồ Lịch Sử</h3>', unsafe_allow_html=True)
+                    st.markdown('<h3 class="sub-header">Biểu Đồ Lịch Sử</h3>', unsafe_allow_html=True)
                     
                     # Time range selector
                     time_range = st.radio("Khoảng thời gian:", ["1 ngày", "7 ngày", "30 ngày"], horizontal=True)
@@ -921,10 +920,10 @@ class SSIStyleDashboard:
                         age_hours = (datetime.now().replace(tzinfo=last_update.tzinfo) - last_update).total_seconds() / 3600
                         
                         if age_hours > 24:
-                            st.warning(f"⚠️ Dữ liệu cũ: {selected_ticker} có bản ghi cuối cách đây {int(age_hours)} giờ ({last_update.strftime('%Y-%m-%d %H:%M')}). Mã này có thể không còn được thu thập.")
+                            st.warning(f"Dữ liệu cũ: {selected_ticker} có bản ghi cuối cách đây {int(age_hours)} giờ ({last_update.strftime('%Y-%m-%d %H:%M')}). Mã này có thể không còn được thu thập.")
                     
                     # Auto-refresh toggle
-                    auto_refresh = st.checkbox("🔄 Tự động làm mới sau mỗi 10 giây", value=False, key=f"auto_refresh_{selected_ticker}")
+                    auto_refresh = st.checkbox("Tự động làm mới sau mỗi 10 giây", value=False, key=f"auto_refresh_{selected_ticker}")
                     
                     # Get historical data with minute-level granularity for MA calculation
                     query = """
@@ -1026,7 +1025,7 @@ class SSIStyleDashboard:
                                 
                                 # Layout - professional style
                                 fig.update_layout(
-                                    title=f"📈 Biểu đồ giá & khối lượng - {selected_ticker}",
+                                    title=f"Biểu đồ giá & khối lượng - {selected_ticker}",
                                     template='plotly_dark',
                                     xaxis_rangeslider_visible=False,
                                     height=650,  # Chiều cao chuẩn professional
@@ -1123,18 +1122,18 @@ class SSIStyleDashboard:
                                     time.sleep(10)
                                     st.rerun()
                             else:
-                                st.warning(f"⚠️ Không có dữ liệu hợp lệ cho {selected_ticker} trong {days} ngày gần đây")
+                                st.warning(f"Không có dữ liệu hợp lệ cho {selected_ticker} trong {days} ngày gần đây")
                         else:
-                            st.warning(f"⚠️ Không có dữ liệu lịch sử cho {selected_ticker} trong {days} ngày gần đây")
+                            st.warning(f"Không có dữ liệu lịch sử cho {selected_ticker} trong {days} ngày gần đây")
                     except Exception as e:
                         logger.error(f"Error querying data for {selected_ticker}: {e}", exc_info=True)
-                        st.error(f"⚠️ Lỗi khi truy vấn dữ liệu: {e}")
+                        st.error(f"Lỗi khi truy vấn dữ liệu: {e}")
                 else:
-                    st.warning(f"⚠️ Không tìm thấy dữ liệu hiện tại cho {selected_ticker}")
+                    st.warning(f"Không tìm thấy dữ liệu hiện tại cho {selected_ticker}")
                 
                 # Display recent records table - always show when ticker is selected
                 st.markdown("---")
-                st.markdown('<h3 class="sub-header">📊 Dữ Liệu Chi Tiết (100 Bản Ghi Gần Nhất)</h3>', unsafe_allow_html=True)
+                st.markdown('<h3 class="sub-header">Dữ Liệu Chi Tiết (100 Bản Ghi Gần Nhất)</h3>', unsafe_allow_html=True)
                 
                 recent_records = self.get_recent_records(selected_ticker, limit=100)
                 
@@ -1195,14 +1194,14 @@ class SSIStyleDashboard:
                     
                     # Download button
                     st.download_button(
-                        label="📥 Tải Xuống CSV",
+                        label="Tải Xuống CSV",
                         data=csv_data,
                         file_name=f"{selected_ticker}_recent_records_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                         mime="text/csv",
                         key=f"download_csv_{selected_ticker}"
                     )
                 else:
-                    st.warning(f"⚠️ Không có dữ liệu chi tiết cho {selected_ticker}")
+                    st.warning(f"Không có dữ liệu chi tiết cho {selected_ticker}")
     
     def run(self):
         """Run the SSI-style dashboard"""
@@ -1210,7 +1209,7 @@ class SSIStyleDashboard:
         self.display_header()
         
         # Sidebar navigation
-        st.sidebar.title("📊 Điều Hướng")
+        st.sidebar.title("Điều Hướng")
         page_options = ["Tổng Quan", "Bảng Giá", "Top Performers", "Phân Tích Cổ Phiếu"]
         
         # Restore preserved page (if refresh button was used)
@@ -1236,7 +1235,7 @@ class SSIStyleDashboard:
         
         # Footer
         st.markdown("---")
-        st.markdown("### 🚀 Vietnam Stock Market Dashboard")
+        st.markdown("### Vietnam Stock Market Dashboard")
         st.markdown("**Nền Tảng:** Kafka + PostgreSQL + Streamlit | **Nguồn:** VNStock Real-time")
         st.markdown(f"**Cập Nhật:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

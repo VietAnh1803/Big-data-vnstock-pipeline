@@ -1,10 +1,10 @@
-# 📈 Vietnam Stock Big Data Pipeline
+# Vietnam Stock Big Data Pipeline
 
-## 🚀 Real-time Stock Data Pipeline với Kafka, Spark và TimescaleDB
+## Real-time Stock Data Pipeline với Kafka, Spark và TimescaleDB
 
 Pipeline chuyên nghiệp để thu thập, xử lý và phân tích dữ liệu chứng khoán Việt Nam real-time với kiến trúc Big Data hiện đại.
 
-## 🏗️ Kiến Trúc Hệ Thống
+## Kiến Trúc Hệ Thống
 
 ![System Architecture](images/system-architecture.png)
 
@@ -17,7 +17,7 @@ Dữ liệu thô → Hàng đợi tin nhắn → Streaming → Xử lý Big Data
                                                               (Quản lý & Monitoring)
 ```
 
-### 📊 Luồng Dữ Liệu (Data Flow)
+### Luồng Dữ Liệu (Data Flow)
 
 Hệ thống hoạt động theo kiến trúc pipeline real-time với các giai đoạn xử lý tuần tự:
 
@@ -38,39 +38,39 @@ Hệ thống hoạt động theo kiến trúc pipeline real-time với các giai
   - **Quản lý & Monitoring Spark**: Monitor Spark jobs, stages, tasks, executor resources, streaming query statistics.
   - Truy cập qua Nginx Reverse Proxy với Basic Authentication.
 
-### 🔧 Các Thành Phần Chính
+### Các Thành Phần Chính
 
-- **📊 VNStock API**: Thu thập dữ liệu real-time từ thị trường chứng khoán Việt Nam.
-- **⚡ Apache Kafka**: Message streaming platform cho real-time data ingestion.
-- **🔥 Apache Spark**: Structured Streaming engine cho big data processing.
-- **🗄️ TimescaleDB**: Time-series database (PostgreSQL extension) tối ưu cho analytics.
-- **📈 Streamlit Dashboard**: Real-time dashboard với giao diện SSI-style chuyên nghiệp.
-- **🌐 Kafka UI**: Web interface để quản lý Kafka topics, partitions, consumer lag.
-- **🔍 Spark UI**: Giao diện monitor Spark jobs, stages, tasks và cluster resources.
-- **🔒 Nginx Reverse Proxy**: Unified access point với Basic Authentication cho các UIs.
+- **VNStock API**: Thu thập dữ liệu real-time từ thị trường chứng khoán Việt Nam.
+- **Apache Kafka**: Message streaming platform cho real-time data ingestion.
+- **Apache Spark**: Structured Streaming engine cho big data processing.
+- **TimescaleDB**: Time-series database (PostgreSQL extension) tối ưu cho analytics.
+- **Streamlit Dashboard**: Real-time dashboard với giao diện SSI-style chuyên nghiệp.
+- **Kafka UI**: Web interface để quản lý Kafka topics, partitions, consumer lag.
+- **Spark UI**: Giao diện monitor Spark jobs, stages, tasks và cluster resources.
+- **Nginx Reverse Proxy**: Unified access point với Basic Authentication cho các UIs.
 
-## 📋 Tính Năng Chính
+## Tính Năng Chính
 
-### ✅ Real-time Data Collection
+### Real-time Data Collection
 - Thu thập dữ liệu từ **200+ mã cổ phiếu** real-time.
 - Collection interval: **10 giây**.
 - Parallel fetching với **24 workers**.
 - Tự động lọc và validate tickers.
 
-### ✅ Big Data Processing
+### Big Data Processing
 - **Spark Structured Streaming** với micro-batching (15 giây).
 - Xử lý **50,000+ messages** mỗi trigger.
 - **200 shuffle partitions** cho high throughput.
 - **10,000 batch size** cho JDBC writes.
 - Checkpointing để đảm bảo fault tolerance.
 
-### ✅ Time-series Database
+### Time-series Database
 - **TimescaleDB** hypertables cho dữ liệu time-series.
 - Tối ưu cho queries theo thời gian.
 - Compression và retention policies.
 - Indexes tối ưu cho performance.
 
-### ✅ Professional Dashboard
+### Professional Dashboard
 - **SSI-style** giao diện chuyên nghiệp.
 - **Real-time updates** với auto-refresh.
 - **Candlestick charts** với MA5, MA20.
@@ -78,7 +78,7 @@ Hệ thống hoạt động theo kiến trúc pipeline real-time với các giai
 - **Phân tích cổ phiếu** chi tiết.
 - **Top/Worst performers** tracking.
 
-## 🚀 Cài Đặt và Triển Khai
+## Cài Đặt và Triển Khai
 
 ### 1. Yêu Cầu Hệ Thống
 
@@ -134,20 +134,20 @@ docker-compose -f docker-compose-timescaledb.yml logs -f [service-name]
 - Spark UI: http://127.0.0.1:4041 (chỉ localhost)
 - Kafka UI: http://127.0.0.1:8081 (chỉ localhost)
 
-## 📊 Services và Ports
+## Services và Ports
 
 | Service | Container Name | Port (External) | Port (Internal) | Status |
 |---------|---------------|-----------------|-----------------|--------|
-| **TimescaleDB** | vietnam-stock-timescaledb | 5433 | 5432 | ✅ Healthy |
-| **Zookeeper** | vietnam-stock-zookeeper | - | 2181 | ✅ Healthy |
-| **Kafka** | vietnam-stock-kafka | 9092, 9093 | 29092 | ✅ Healthy |
-| **Real Data Producer** | real-data-producer-vn30 | - | - | ✅ Running |
-| **Spark Consumer** | vietnam-stock-spark-consumer | 4041 | 4040 | ✅ Healthy |
-| **Dashboard** | vietnam-stock-dashboard | 8501 | 8501 | ✅ Healthy |
-| **Kafka UI** | vietnam-stock-kafka-ui | 8081 | 8080 | ✅ Healthy |
-| **UI Proxy** | vietnam-stock-ui-proxy | 8080 | 80 | ✅ Running |
+| **TimescaleDB** | vietnam-stock-timescaledb | 5433 | 5432 | Healthy |
+| **Zookeeper** | vietnam-stock-zookeeper | - | 2181 | Healthy |
+| **Kafka** | vietnam-stock-kafka | 9092, 9093 | 29092 | Healthy |
+| **Real Data Producer** | real-data-producer-vn30 | - | - | Running |
+| **Spark Consumer** | vietnam-stock-spark-consumer | 4041 | 4040 | Healthy |
+| **Dashboard** | vietnam-stock-dashboard | 8501 | 8501 | Healthy |
+| **Kafka UI** | vietnam-stock-kafka-ui | 8081 | 8080 | Healthy |
+| **UI Proxy** | vietnam-stock-ui-proxy | 8080 | 80 | Running |
 
-## 🗄️ Database Schema
+## Database Schema
 
 ### Bảng Chính: `realtime_quotes`
 
@@ -178,7 +178,7 @@ SELECT create_hypertable('realtime_quotes', 'time');
 - Indexes trên `ticker`, `time` cho query performance.
 - Tối ưu cho time-range queries.
 
-## ⚡ Kafka Configuration
+## Kafka Configuration
 
 ### Topic: `realtime_quotes`
 
@@ -202,25 +202,25 @@ SELECT create_hypertable('realtime_quotes', 'time');
 - **JDBC Batch Size**: 10,000.
 - **JDBC Write Partitions**: 8.
 
-## 📈 Dashboard Features
+## Dashboard Features
 
-### 🏠 Trang Chủ - Tổng Quan
+### Trang Chủ - Tổng Quan
 - **Tổng Quan Thị Trường**: Số liệu tổng hợp, số lượng mã, tổng khối lượng.
 - **Phân Bố Hiệu Suất**: Biểu đồ tăng/giảm/không đổi.
 - **Real-time Metrics**: Cập nhật tự động.
 
-### 📋 Bảng Giá Real-time
+### Bảng Giá Real-time
 - Tìm kiếm và lọc mã cổ phiếu.
 - Sắp xếp theo khối lượng, thay đổi %, giá.
 - Hiển thị 50-500 mã.
 - Loại bỏ duplicate entries.
 
-### 🚀 Top Performers
+### Top Performers
 - Top 20 cổ phiếu tăng giá mạnh nhất.
 - Biểu đồ và bảng chi tiết.
 - Real-time updates.
 
-### 🔍 Phân Tích Cổ Phiếu
+### Phân Tích Cổ Phiếu
 - **Combined Chart**: Candlestick + Volume trên cùng một chart.
 - **Moving Averages**: MA5 (cyan) và MA20 (orange).
 - **Volume Chart**: Màu sắc professional (cyan #00BCD4).
@@ -228,7 +228,7 @@ SELECT create_hypertable('realtime_quotes', 'time');
 - **Auto-refresh**: Tùy chọn tự động làm mới sau 10 giây.
 - **Thông tin giá hiện tại**: Giá, thay đổi, phần trăm.
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -264,7 +264,7 @@ POSTGRES_USER=stock_app
 POSTGRES_PASSWORD=<password>
 ```
 
-## 📊 Monitoring & Logging
+## Monitoring & Logging
 
 ### Log Locations
 
@@ -321,7 +321,7 @@ docker exec vietnam-stock-kafka kafka-topics --bootstrap-server localhost:9092 -
 - **Data freshness**: Thời gian cập nhật gần nhất.
 - **Query performance**: Response time.
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 
@@ -362,7 +362,7 @@ vietnam-stock-pipeline/
 3. **Tối ưu Spark**: Điều chỉnh `MAX_OFFSETS_PER_TRIGGER`, `SPARK_SHUFFLE_PARTITIONS`.
 4. **Thêm dashboard feature**: Cập nhật `dashboard/ssi_style_dashboard.py`.
 
-## 🔒 Security
+## Security
 
 ### Authentication
 
@@ -384,7 +384,7 @@ vietnam-stock-pipeline/
 - Resource limits (nếu cần).
 - Read-only volumes cho data files.
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -444,7 +444,7 @@ docker exec vietnam-stock-timescaledb psql -U stock_app -d stock_db -c "SELECT C
 - Retention policies.
 - Index optimization.
 
-## 📞 Support & Resources
+## Support & Resources
 
 ### Documentation
 - **README.md**: File này
@@ -478,9 +478,9 @@ docker-compose -f docker-compose-timescaledb.yml build --no-cache
 docker system prune -f
 ```
 
-## 🎯 Roadmap
+## Roadmap
 
-### ✅ Phase 1: Core Pipeline (Completed)
+### Phase 1: Core Pipeline (Completed)
 - [x] VNStock API integration.
 - [x] Kafka streaming với 200+ tickers.
 - [x] Spark Structured Streaming.
@@ -489,14 +489,14 @@ docker system prune -f
 - [x] Kafka UI và Spark UI.
 - [x] Security với Basic Auth.
 
-### 🔄 Phase 2: Advanced Features (Planned)
+### Phase 2: Advanced Features (Planned)
 - [ ] Machine learning predictions.
 - [ ] Alert system (email/SMS).
 - [ ] API endpoints (REST/GraphQL).
 - [ ] Advanced analytics queries.
 - [ ] Multi-exchange support.
 
-### 🚀 Phase 3: Enterprise Features (Future)
+### Phase 3: Enterprise Features (Future)
 - [ ] High availability setup.
 - [ ] Multi-region deployment.
 - [ ] Real-time alerts.
@@ -513,4 +513,4 @@ docker system prune -f
 
 ---
 
-**🚀 Vietnam Stock Big Data Pipeline - Powered by Kafka + Spark + TimescaleDB + Streamlit**
+**Vietnam Stock Big Data Pipeline - Powered by Kafka + Spark + TimescaleDB + Streamlit**
