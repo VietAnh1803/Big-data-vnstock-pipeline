@@ -242,6 +242,31 @@ services:
       - vietnam-stock-network
     restart: unless-stopped
 
+  # pgAdmin - Web UI for TimescaleDB/PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: vietnam-stock-pgadmin
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@stock.com
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - vietnam-stock-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/misc/ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Spark History Server - view past jobs from event logs
   spark-history:
     image: apache/spark:3.4.0
@@ -312,4 +337,6 @@ volumes:
   kafka_data:
     driver: local
   spark_checkpoint:
+    driver: local
+  pgadmin_data:
     driver: local
