@@ -14,7 +14,23 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 import pytz
-import vnstock
+try:
+    # vnstock3 package namespace
+    from vnstock3 import Vnstock  # type: ignore
+except Exception:  # pragma: no cover
+    Vnstock = None
+
+try:
+    # vnstock v3+
+    from vnstock import Vnstock as VnstockV3  # type: ignore
+except Exception:  # pragma: no cover
+    VnstockV3 = None
+
+try:
+    # Legacy fallback for older package versions
+    import vnstock as vnstock_legacy  # type: ignore
+except Exception:  # pragma: no cover
+    vnstock_legacy = None
 
 # Configure logging
 logging.basicConfig(
@@ -36,12 +52,56 @@ class VietnamStockRealDataProducer:
         self.market_close_hour = int(os.getenv('MARKET_CLOSE_HOUR', '15'))
         self.timezone = pytz.timezone('Asia/Ho_Chi_Minh')
         self.max_workers = int(os.getenv('MAX_WORKERS', '16'))
+        self.vnstock_api_key = os.getenv("VNSTOCK_API_KEY", "").strip()
+        self.vnstock_client = self._init_quote_client()
+        self.vnstock_source = os.getenv("VNSTOCK_SOURCE", "KBS")
+        self.max_requests_per_minute = int(os.getenv("VNSTOCK_MAX_REQUESTS_PER_MINUTE", "18"))
+        self.use_largecap_first = os.getenv("VNSTOCK_USE_LARGECAP_FIRST", "true").strip().lower() == "true"
+        self.max_tickers_in_rotation = int(os.getenv("VNSTOCK_MAX_TICKERS_IN_ROTATION", "30"))
+        self._ticker_cursor = 0
+        self._last_price_by_ticker: Dict[str, float] = {}
+        self.vn_market_holidays = self._load_vn_market_holidays()
 
         self.producer = self._init_kafka_producer()
         self.popular_stocks = self._load_tickers()
+        self.popular_stocks = self._optimize_ticker_universe(self.popular_stocks)
         self.market_indices = ['VNINDEX', 'HNXINDEX', 'UPCOMINDEX', 'VN30']
 
         logger.info(f"Loaded {len(self.popular_stocks)} Vietnam stocks for real data collection")
+
+    def _load_vn_market_holidays(self) -> set[str]:
+        """Load Vietnamese market holiday list in YYYY-MM-DD format."""
+        raw = os.getenv("VN_MARKET_HOLIDAYS", "").strip()
+        holidays = {d.strip() for d in raw.split(",") if d.strip()} if raw else set()
+        return holidays
+
+    def _init_quote_client(self):
+        """Initialize vnstock quote client (v3 preferred)."""
+        init_kwargs = {"show_log": False}
+        if self.vnstock_api_key:
+            init_kwargs["api_key"] = self.vnstock_api_key
+
+        if Vnstock is not None:
+            try:
+                # Prefer vnstock v3 API surface.
+                return Vnstock(**init_kwargs)
+            except Exception as e:
+                logger.warning(f"vnstock3 init failed, fallback to other API: {e}")
+                try:
+                    # Fallback in case installed version does not support api_key kwarg.
+                    return Vnstock(show_log=False)
+                except Exception:
+                    pass
+        if VnstockV3 is not None:
+            try:
+                return VnstockV3(**init_kwargs)
+            except Exception as e:
+                logger.warning(f"vnstock v3 init failed, fallback to legacy API: {e}")
+                try:
+                    return VnstockV3(show_log=False)
+                except Exception:
+                    pass
+        return None
 
     def _init_kafka_producer(self):
         """Initialize Kafka Producer"""
@@ -124,10 +184,59 @@ class VietnamStockRealDataProducer:
             'HPG', 'HAG', 'HAX', 'VGC', 'VTO'
         ]
 
+    def _optimize_ticker_universe(self, tickers: List[str]) -> List[str]:
+        """
+        Optimize ticker rotation for free-tier API:
+        - prioritize large/liquid tickers first
+        - cap rotation universe to improve revisit frequency
+        """
+        if not tickers:
+            return tickers
+
+        deduped = list(dict.fromkeys([t.strip().upper() for t in tickers if t.strip()]))
+        if not deduped:
+            return deduped
+
+        # Prioritized large-cap/liquid basket (VN30/banks/market leaders).
+        priority_order = [
+            "VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "HDB", "STB", "EIB",
+            "VIC", "VHM", "VRE", "NVL", "KDH", "NLG",
+            "HPG", "GVR", "DGC", "GAS", "PLX", "POW",
+            "FPT", "MWG", "PNJ", "VNM", "MSN", "SAB",
+            "SSI", "VND", "HCM", "VCI",
+            "VJC", "HVN", "HAH", "VTP",
+        ]
+
+        if self.use_largecap_first:
+            priority = [t for t in priority_order if t in deduped]
+            remain = [t for t in deduped if t not in set(priority)]
+            ordered = priority + remain
+        else:
+            ordered = deduped
+
+        if self.max_tickers_in_rotation > 0:
+            ordered = ordered[: self.max_tickers_in_rotation]
+
+        logger.info(
+            "Ticker rotation optimized: total=%s, largecap_first=%s, top10=%s",
+            len(ordered),
+            self.use_largecap_first,
+            ",".join(ordered[:10]),
+        )
+        return ordered
+
     def _is_market_open(self) -> bool:
         """Check if the Vietnam stock market is open (GMT+7)"""
         now_utc = datetime.now(pytz.utc)
         now_hcm = now_utc.astimezone(self.timezone)
+        now_date = now_hcm.date()
+        date_key = now_date.isoformat()
+        month_day = now_date.strftime("%m-%d")
+
+        # Fixed-date public holidays (approx baseline, can override via VN_MARKET_HOLIDAYS)
+        fixed_holidays = {"01-01", "04-30", "05-01", "09-02"}
+        if date_key in self.vn_market_holidays or month_day in fixed_holidays:
+            return False
         
         # Check if it's a weekday
         if now_hcm.weekday() >= 5:  # Saturday = 5, Sunday = 6
@@ -141,35 +250,66 @@ class VietnamStockRealDataProducer:
     def _fetch_real_stock_data(self, ticker: str) -> Optional[Dict[str, Any]]:
         """Fetch real stock data from VNStock API"""
         try:
-            # Get intraday data from VNStock
-            df = vnstock.stock_intraday_data(symbol=ticker, page_size=1)
+            # Prefer vnstock v3 quote adapter.
+            if self.vnstock_client is not None:
+                stock_obj = self.vnstock_client.stock(symbol=ticker, source=self.vnstock_source)
+                df = stock_obj.quote.intraday(page_size=1, show_log=False)
+            elif vnstock_legacy is not None:
+                # Legacy fallback path for backward compatibility.
+                df = vnstock_legacy.stock_intraday_data(symbol=ticker, page_size=1)
+            else:
+                logger.error("No vnstock client available")
+                return None
             
             if df is not None and not df.empty:
                 latest = df.iloc[0]
                 current_time = datetime.now(self.timezone)
                 
-                # Extract data from VNStock response - handle different column names safely
+                # Extract data from vnstock response with tolerant column mapping.
                 try:
-                    current_price = float(latest.get('averagePrice', latest.get('price', 0)))
-                    prev_price_change = float(latest.get('prevPriceChange', latest.get('change', 0)))
-                    volume = int(latest.get('volume', 0))
-                    quote_time = str(latest.get('time', current_time.strftime('%H:%M:%S')))
-                    
-                    # Calculate percent change safely
-                    if current_price > 0 and prev_price_change != 0:
-                        percent_change = (prev_price_change / (current_price - prev_price_change) * 100)
+                    current_price = float(
+                        latest.get('averagePrice',
+                                   latest.get('price',
+                                              latest.get('match_price',
+                                                         latest.get('close', 0))))
+                    )
+                    # Some sources (e.g., KBS intraday) only expose time/price/volume.
+                    # Prefer provider's absolute change if present; otherwise infer
+                    # from previous observed tick for the same ticker.
+                    provider_change = latest.get(
+                        'prevPriceChange',
+                        latest.get('change', latest.get('price_change', None))
+                    )
+                    inferred_prev_price = self._last_price_by_ticker.get(ticker, current_price)
+                    if provider_change is not None:
+                        change_abs = float(provider_change)
+                        base_price = current_price - change_abs
                     else:
-                        percent_change = 0
+                        change_abs = current_price - inferred_prev_price
+                        base_price = inferred_prev_price
+                    volume = int(latest.get('volume', latest.get('match_qtty', 0)))
+                    quote_time_raw = str(
+                        latest.get('time',
+                                   latest.get('match_time',
+                                              current_time.strftime('%H:%M:%S')))
+                    )
+                    # Keep compatibility with DB schema (quote_time VARCHAR(10)).
+                    # vnstock may return full datetime; we only keep HH:MM:SS.
+                    quote_time = quote_time_raw[-8:] if len(quote_time_raw) >= 8 else quote_time_raw
+                    
+                    # Calculate percent change safely (against base price).
+                    percent_change = (change_abs / base_price * 100) if base_price else 0
+                    self._last_price_by_ticker[ticker] = current_price
                     
                     return {
                         'ticker': ticker,
                         'price': round(current_price, 2),
                         'volume': volume,
-                        'change': round(prev_price_change, 2),
+                        'change': round(change_abs, 2),
                         'percent_change': round(percent_change, 2),
                         'high': round(current_price * 1.02, 2),  # Estimate high
                         'low': round(current_price * 0.98, 2),   # Estimate low
-                        'open_price': round(current_price - prev_price_change, 2),
+                        'open_price': round(base_price if base_price else current_price, 2),
                         'close_price': current_price,
                         'quote_time': quote_time,
                         'ingest_time': current_time.isoformat(),
@@ -182,7 +322,10 @@ class VietnamStockRealDataProducer:
                 logger.warning(f"No data returned for {ticker}")
                 return None
                 
-        except Exception as e:
+        except BaseException as e:
+            err_msg = str(e)
+            if "Rate limit exceeded" in err_msg or "GIỚI HẠN API ĐÃ ĐẠT TỐI ĐA" in err_msg:
+                logger.warning("VNStock rate limit reached while fetching %s", ticker)
             logger.error(f"Error fetching real data for {ticker}: {str(e)}")
             return None
 
@@ -202,7 +345,13 @@ class VietnamStockRealDataProducer:
             logger.info("Market is closed. Skipping real-time quote collection.")
             return
 
-        logger.info(f"Collecting REAL-TIME quotes for {len(self.popular_stocks)} stocks...")
+        # Respect vnstock rate limit by selecting a capped ticker slice per cycle.
+        per_cycle_limit = max(1, int(self.max_requests_per_minute * self.collection_interval / 60))
+        selected_tickers = self._select_tickers_for_cycle(per_cycle_limit)
+        logger.info(
+            f"Collecting REAL-TIME quotes for {len(selected_tickers)} tickers this cycle "
+            f"(limit={per_cycle_limit}/cycle, source={self.vnstock_source})"
+        )
 
         success_count = 0
         error_count = 0
@@ -216,8 +365,9 @@ class VietnamStockRealDataProducer:
                     return None
 
         # Parallel fetch to increase throughput; control workers via MAX_WORKERS
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_map = {executor.submit(worker, t): t for t in self.popular_stocks}
+        worker_count = max(1, min(self.max_workers, len(selected_tickers), per_cycle_limit))
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            future_map = {executor.submit(worker, t): t for t in selected_tickers}
             for future in as_completed(future_map):
                 ticker = future_map[future]
                 try:
@@ -232,8 +382,24 @@ class VietnamStockRealDataProducer:
                     error_count += 1
 
         logger.info(
-            f"Cycle stats: published={success_count}, no_data={no_data_count}, errors={error_count}, tickers={len(self.popular_stocks)}"
+            f"Cycle stats: published={success_count}, no_data={no_data_count}, errors={error_count}, "
+            f"tickers={len(selected_tickers)}, cursor={self._ticker_cursor}"
         )
+
+    def _select_tickers_for_cycle(self, limit: int) -> List[str]:
+        """Round-robin ticker selection to distribute requests across full universe."""
+        total = len(self.popular_stocks)
+        if total == 0:
+            return []
+        limit = max(1, min(limit, total))
+        start = self._ticker_cursor % total
+        end = start + limit
+        if end <= total:
+            selected = self.popular_stocks[start:end]
+        else:
+            selected = self.popular_stocks[start:] + self.popular_stocks[:end - total]
+        self._ticker_cursor = (start + limit) % total
+        return selected
 
     def run_schedule(self):
         """Schedule real data collection"""

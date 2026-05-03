@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir psycopg2-binary snowflake-connector-python
+
+COPY consumers/snowflake_sync_job.py /app/snowflake_sync_job.py
+COPY scripts/snowflake /app/scripts/snowflake
+
+CMD ["python", "/app/snowflake_sync_job.py"]
