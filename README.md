@@ -6,7 +6,7 @@ Pipeline chuyên nghiệp để thu thập, xử lý và phân tích dữ liệu
 
 ## Kiến Trúc Hệ Thống
 
-![System Architecture](images/system-architecture.png)
+![System Architecture](system-architecture.png)
 
 ```
 VNStock API → Kafka Producer → Kafka Topics → Spark Structured Streaming → TimescaleDB (Staging)
